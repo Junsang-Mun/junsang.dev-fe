@@ -23,16 +23,16 @@
  */
 
 @supports (scrollbar-color: auto) {
-    main.overflow-y-auto {
+    * {
         scrollbar-color: #155e75 transparent;
     }
 }
 
 @supports selector(::-webkit-scrollbar) {
-    main.overflow-y-auto::-webkit-scrollbar {
+    *::-webkit-scrollbar {
         background: transparent;
     }
-    main.overflow-y-auto::-webkit-scrollbar-thumb {
+    *::-webkit-scrollbar-thumb {
         background: #155e75;
     }
 }
