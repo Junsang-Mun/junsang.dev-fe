@@ -10,28 +10,28 @@
             period: "Jan 2020 - Present",
             description:
                 "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-            logo: "https://http.cat/404",
+            // logo: "https://http.cat/404",
         },
         {
             role: "Sensei",
             organization: "Kibotos",
             period: "Jun 2022 - Present",
             description: "Teaching students how to fight",
-            logo: "https://http.cat/404",
+            // logo: "https://http.cat/404",
         },
         {
             role: "박사님",
             organization: "Rhodos Island",
             period: "Jun 2022 - Present",
             description: "Fighting against the originium infection",
-            logo: "https://http.cat/404",
+            // logo: "https://http.cat/404",
         },
         {
             role: "꾜주니",
             organization: "엘리아스",
             period: "Jun 2022 - Present",
             description: "버터에게 밥을 챙겨주는 역할을 맡고 있습니다",
-            logo: "https://http.cat/404",
+            // logo: "https://http.cat/404",
         },
     ];
 
@@ -146,11 +146,13 @@
             <h2 class="text-2xl font-bold mb-4 text-zinc-100">Experience</h2>
             {#each experience as job}
                 <div class="mb-4">
-                    <img
-                        src={job.logo}
-                        alt={job.organization}
-                        class="w-12 h-12 mb-2"
-                    />
+                    {#if job.logo}
+                        <img
+                            src={job.logo}
+                            alt={job.organization}
+                            class="w-12 h-12 mb-2"
+                        />
+                    {/if}
                     <h3 class="text-xl font-bold text-zinc-100">{job.role}</h3>
                     <p class="text-zinc-100">
                         {job.organization} | {job.period}
