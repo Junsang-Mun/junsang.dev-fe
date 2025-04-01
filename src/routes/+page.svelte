@@ -92,7 +92,7 @@
 </script>
 
 <div class="flex flex-col h-screen bg-zinc-900">
-    <Header title="My Blog" />
+    <Header title="junsang.dev" />
     <main class="flex-1 overflow-y-auto container mx-auto p-4">
         <h1 class="text-3xl font-bold mb-6 text-zinc-100">Latest Posts</h1>
         {#each posts as post}
@@ -101,6 +101,7 @@
                 summary={post.summary}
                 date={post.date}
                 link={post.link}
+                className="mb-4"
             />
         {/each}
     </main>
