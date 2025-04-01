@@ -3,9 +3,12 @@
     export let summary;
     export let date;
     export let link;
+    export let className;
 </script>
 
-<article class="bg-zinc-800 shadow-md rounded-lg overflow-hidden">
+<article
+    class={`bg-zinc-800 shadow-md rounded-lg overflow-hidden ${className}`}
+>
     <div class="p-4">
         <h2 class="text-xl font-bold mb-2">
             <a

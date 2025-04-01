@@ -1,5 +1,5 @@
 <script>
-    export let title = "My Blog";
+    export let title = "junsang.dev";
 </script>
 
 <header class="bg-zinc-950 text-zinc-100 p-4">
