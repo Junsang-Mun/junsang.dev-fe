@@ -44,12 +44,10 @@
     // Prepare payload for API with escaped data
     function preparePostPayload(isPublished) {
         return {
-            post: {
-                title: escapeString(title),
-                content: escapeString(content),
-                tags: tags.map((tag) => escapeString(tag)),
-                published: isPublished,
-            },
+            title: escapeString(title),
+            content: escapeString(content),
+            tags: tags.map((tag) => escapeString(tag)),
+            published: isPublished,
         };
     }
 
