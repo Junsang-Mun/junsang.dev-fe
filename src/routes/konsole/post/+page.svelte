@@ -8,15 +8,29 @@
     export let tags = [];
     let tagInput = "";
 
+    // Utility function to escape special characters in strings
+    function escapeString(str) {
+        if (typeof str !== "string") return str;
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     // Tag handling functions
     function addTag(event) {
         // Add tag on Enter key press, prevent form submission
         if (event.key === "Enter" && tagInput.trim()) {
             event.preventDefault();
 
+            // Sanitize tag input
+            const sanitizedTag = escapeString(tagInput.trim());
+
             // Don't add if the tag already exists
-            if (!tags.includes(tagInput.trim())) {
-                tags = [...tags, tagInput.trim()];
+            if (!tags.includes(sanitizedTag) && sanitizedTag) {
+                tags = [...tags, sanitizedTag];
             }
 
             tagInput = ""; // Clear the input
@@ -27,14 +41,21 @@
         tags = tags.filter((tag) => tag !== tagToRemove);
     }
 
+    // Prepare payload for API with escaped data
+    function preparePostPayload(isPublished) {
+        return {
+            post: {
+                title: escapeString(title),
+                content: escapeString(content),
+                tags: tags.map((tag) => escapeString(tag)),
+                published: isPublished,
+            },
+        };
+    }
+
     // Save and load functionality
     async function handleSave() {
-        const payload = {
-            title,
-            content,
-            tags,
-            published: false, // Save as draft
-        };
+        const payload = preparePostPayload(false); // Save as draft
 
         // Log the complete payload
         console.log("Saving post: " + JSON.stringify(payload));
@@ -60,16 +81,15 @@
 
     async function handlePublish() {
         try {
-            // Replace with your actual API endpoint
+            const payload = preparePostPayload(true); // Published post
+
+            // Log the complete payload
+            console.log("Publishing post: " + JSON.stringify(payload));
+
             const response = await fetch("/api/posts", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    title,
-                    content,
-                    tags,
-                    published: true,
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (response.ok) {
