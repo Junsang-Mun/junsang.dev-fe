@@ -1,4 +1,4 @@
-<footer class="bg-gray-800 text-white p-4 mt-8">
+<footer class="bg-zinc-950 text-zinc-100 p-4 mt-8">
     <div class="container mx-auto text-center">
         <p>&copy; {new Date().getFullYear()} My Blog. All rights reserved.</p>
     </div>

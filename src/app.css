@@ -2,25 +2,36 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
+/* COLOR THEME EXPLAINED
+ ********** BACKGROUDS **********
+ * Default: bg-zinc-900
+ * Card: bg-zinc-800
+
+ ********** TEXTS **********
+ * Default: text-zinc-100
+ * Muted: text-zinc-400
+
+ ********** ACCENTS **********
+ * Default: cyan-400
+ * Accent: cyan-300
+
+ */
+
 main.overflow-y-auto {
     /* For WebKit browsers */
     ::-webkit-scrollbar {
-        width: 12px;
+        width: auto;
     }
 
     ::-webkit-scrollbar-track {
-        background: #f1f1f1;
+        background: #ffffff00;
     }
 
     ::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 6px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-        background: #555;
+        background: #155e75;
+        border-radius: 0px;
     }
 
     scrollbar-width: thin;
-    scrollbar-color: #a0a0a0 #ffffff00;
+    scrollbar-color: #155e75 #ffffff00;
 }

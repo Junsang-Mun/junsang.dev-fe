@@ -91,10 +91,10 @@
     ];
 </script>
 
-<div class="flex flex-col h-screen">
+<div class="flex flex-col h-screen bg-zinc-900">
     <Header title="My Blog" />
     <main class="flex-1 overflow-y-auto container mx-auto p-4">
-        <h1 class="text-3xl font-bold mb-6">Latest Posts</h1>
+        <h1 class="text-3xl font-bold mb-6 text-zinc-100">Latest Posts</h1>
         {#each posts as post}
             <Card
                 title={post.title}
