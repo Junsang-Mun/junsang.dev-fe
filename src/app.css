@@ -35,3 +35,13 @@ main.overflow-y-auto {
     scrollbar-width: thin;
     scrollbar-color: #155e75 #ffffff00;
 }
+
+::selection {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+::-moz-selection {
+    background-color: #ffffff;
+    color: #000000;
+}
