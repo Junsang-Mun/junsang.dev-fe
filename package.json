@@ -21,6 +21,8 @@
 		"vite": "^6.0.0"
 	},
 	"dependencies": {
-		"@auth/core": "^0.38.0"
+		"@auth/core": "^0.38.0",
+		"dompurify": "^3.2.4",
+		"marked": "^15.0.7"
 	}
 }
