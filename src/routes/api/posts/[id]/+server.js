@@ -1,16 +1,32 @@
 import { PrismaClient } from "@prisma/client";
 import { json } from "@sveltejs/kit";
 
-const prismaId = new PrismaClient();
+const prisma = new PrismaClient();
 
-export async function GET({ params }) {
+export async function GET({ params, cookies }) {
   const id = Number(params.id);
-  const post = await prismaId.post.findUnique({
+  const sessionCookie = cookies.get("session");
+
+  const post = await prisma.post.findUnique({
     where: { id },
   });
 
   if (!post) {
     return new Response("Not found", { status: 404 });
+  }
+
+  // unpublished된 글이면 로그인 여부 확인
+  if (!post.published) {
+    if (!sessionCookie) {
+      return new Response("Unauthorized", { status: 403 });
+    }
+
+    try {
+      JSON.parse(sessionCookie); // 유효한 세션인지 확인
+    } catch {
+      cookies.delete("session", { path: "/" });
+      return new Response("Unauthorized", { status: 403 });
+    }
   }
 
   return json({
@@ -19,30 +35,64 @@ export async function GET({ params }) {
   });
 }
 
-export async function PATCH({ request, params }) {
+// Update a post
+export async function PUT({ request, params, cookies }) {
   const id = Number(params.id);
-  const data = await request.json();
+  const sessionCookie = cookies.get("session");
 
-  const updated = await prismaId.post.update({
+  // Check authentication
+  if (!sessionCookie) {
+    return new Response("Unauthorized", { status: 403 });
+  }
+
+  try {
+    JSON.parse(sessionCookie); // Validate session
+  } catch {
+    cookies.delete("session", { path: "/" });
+    return new Response("Unauthorized", { status: 403 });
+  }
+
+  const { title, content, tags, published } = await request.json();
+
+  const updatedPost = await prisma.post.update({
     where: { id },
     data: {
-      ...data,
-      tags: JSON.stringify(data.tags),
+      title,
+      content,
+      tags: JSON.stringify(tags),
+      published,
+      updatedAt: new Date(),
     },
   });
 
   return json({
-    ...updated,
-    tags: JSON.parse(updated.tags),
+    id: updatedPost.id,
+    updated: true,
   });
 }
 
-export async function DELETE({ params }) {
+// Delete a post
+export async function DELETE({ params, cookies }) {
   const id = Number(params.id);
+  const sessionCookie = cookies.get("session");
 
-  await prismaId.post.delete({
+  // Check authentication
+  if (!sessionCookie) {
+    return new Response("Unauthorized", { status: 403 });
+  }
+
+  try {
+    JSON.parse(sessionCookie); // Validate session
+  } catch {
+    cookies.delete("session", { path: "/" });
+    return new Response("Unauthorized", { status: 403 });
+  }
+
+  await prisma.post.delete({
     where: { id },
   });
 
-  return new Response(null, { status: 204 });
+  return json({
+    deleted: true,
+  });
 }

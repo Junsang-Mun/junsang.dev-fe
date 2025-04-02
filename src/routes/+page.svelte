@@ -55,7 +55,10 @@
         {/if}
         {#if filteredPosts.length > 0}
             {#each filteredPosts as post}
-                <Card {...post} className="mb-4" />
+                <Card
+                    {...post}
+                    className="mb-4 hover:ring hover:ring-cyan-500 cursor-pointer"
+                />
             {/each}
         {:else if posts.length === 0}
             <p class="text-lg text-zinc-300">

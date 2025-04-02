@@ -4,6 +4,7 @@
     import { onMount } from "svelte";
     import { page } from "$app/stores";
     import { marked } from "marked";
+    import { goto } from "$app/navigation";
 
     let post = null;
     let loading = true;
@@ -38,7 +39,7 @@
         {#if loading}
             <p class="text-zinc-400">Loading post...</p>
         {:else if error}
-            <p class="text-red-400">Error: {error}</p>
+            {goto("/error")}
         {:else if post}
             {#if post.tags && post.tags.length > 0}
                 <div class="mb-4 flex flex-wrap gap-2">

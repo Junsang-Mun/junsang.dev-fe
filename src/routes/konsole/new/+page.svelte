@@ -1,5 +1,6 @@
 <script>
     import { onMount } from "svelte";
+    import { goto } from "$app/navigation"; // Add the import for goto
     import MarkdownEditor from "$lib/components/MarkdownEditor.svelte";
 
     // Post data
@@ -31,6 +32,8 @@
             // Don't add if the tag already exists
             if (!tags.includes(sanitizedTag) && sanitizedTag) {
                 tags = [...tags, sanitizedTag];
+                // Immediately save to localStorage when a tag is added
+                saveToLocalStorage();
             }
 
             tagInput = ""; // Clear the input
@@ -39,6 +42,30 @@
 
     function removeTag(tagToRemove) {
         tags = tags.filter((tag) => tag !== tagToRemove);
+        // Immediately save to localStorage when a tag is removed
+        saveToLocalStorage();
+    }
+
+    // Function to save current state to localStorage
+    function saveToLocalStorage() {
+        try {
+            localStorage.setItem(
+                "blog-draft",
+                JSON.stringify({
+                    savedTitle: title,
+                    savedContent: content,
+                    savedTags: tags,
+                    lastSaved: new Date().toISOString(),
+                }),
+            );
+            console.log("Draft saved to localStorage:", {
+                title,
+                tagsCount: tags.length,
+                contentLength: content?.length || 0,
+            });
+        } catch (e) {
+            console.error("Failed to save draft to localStorage:", e);
+        }
     }
 
     // Prepare payload for API with escaped data
@@ -53,6 +80,11 @@
 
     // Save and load functionality
     async function handleSave() {
+        if (!title.trim()) {
+            alert("Please enter a title for your post");
+            return;
+        }
+
         const payload = preparePostPayload(false); // Save as draft
 
         // Log the complete payload
@@ -66,10 +98,14 @@
             });
 
             if (response.ok) {
-                alert("Post saved successfully!");
+                const result = await response.json();
+                alert("Post saved as draft successfully!");
                 localStorage.removeItem("blog-draft");
+                // Use goto for navigation
+                goto("/konsole");
             } else {
-                throw new Error("Failed to save post");
+                const errorData = await response.text();
+                throw new Error(`Failed to save post: ${errorData}`);
             }
         } catch (error) {
             console.error("Error saving post:", error);
@@ -78,6 +114,11 @@
     }
 
     async function handlePublish() {
+        if (!title.trim()) {
+            alert("Please enter a title for your post");
+            return;
+        }
+
         try {
             const payload = preparePostPayload(true); // Published post
 
@@ -91,10 +132,14 @@
             });
 
             if (response.ok) {
+                const result = await response.json();
                 alert("Post published successfully!");
                 localStorage.removeItem("blog-draft");
+                // Use goto for navigation
+                goto("/konsole");
             } else {
-                throw new Error("Failed to publish post");
+                const errorData = await response.text();
+                throw new Error(`Failed to publish post: ${errorData}`);
             }
         } catch (error) {
             console.error("Error publishing post:", error);
@@ -102,46 +147,48 @@
         }
     }
 
+    // Watch for changes to title and content
+    $: if (title) {
+        saveToLocalStorage();
+    }
+
+    $: if (content) {
+        saveToLocalStorage();
+    }
+
     onMount(() => {
         // Load saved draft if available
-        const savedDraft = localStorage.getItem("blog-draft");
-        if (savedDraft) {
-            try {
-                const { savedTitle, savedContent, savedTags } =
+        try {
+            const savedDraft = localStorage.getItem("blog-draft");
+            if (savedDraft) {
+                console.log("Found saved draft in localStorage");
+                const { savedTitle, savedContent, savedTags, lastSaved } =
                     JSON.parse(savedDraft);
+
                 title = savedTitle || "";
                 content = savedContent || "";
                 tags = savedTags || [];
-            } catch (e) {
-                console.error("Failed to load draft", e);
+
+                if (lastSaved) {
+                    const saveTime = new Date(lastSaved);
+                    console.log(
+                        `Draft was last saved at: ${saveTime.toLocaleString()}`,
+                    );
+                }
             }
+        } catch (e) {
+            console.error("Failed to load draft from localStorage:", e);
         }
 
-        // Set up autosave for title and tags only (content is handled by editor)
+        // Set up autosave on an interval as a backup
         const autosaveInterval = setInterval(() => {
-            if (title || tags.length > 0) {
-                const savedDraft = localStorage.getItem("blog-draft") || "{}";
-                let draftObj = {};
-
-                try {
-                    draftObj = JSON.parse(savedDraft);
-                } catch (e) {
-                    console.error("Failed to parse saved draft", e);
-                }
-
-                localStorage.setItem(
-                    "blog-draft",
-                    JSON.stringify({
-                        ...draftObj,
-                        savedTitle: title,
-                        savedTags: tags,
-                    }),
-                );
-            }
-        }, 10000); // Save every 10 seconds
+            saveToLocalStorage();
+        }, 30000); // Save every 30 seconds
 
         return () => {
             clearInterval(autosaveInterval);
+            // One final save when component unmounts
+            saveToLocalStorage();
         };
     });
 </script>
@@ -155,7 +202,7 @@
                         type="text"
                         placeholder="Post Title"
                         bind:value={title}
-                        class="w-full p-3 bg-zinc-700 border border-zinc-600 rounded text-2xl font-bold focus:outline-none focus:border-blue-500"
+                        class="w-full p-3 bg-zinc-700 border border-zinc-600 rounded text-2xl font-bold focus:outline-none focus:border-cyan-500"
                     />
                 </div>
                 <div class="flex space-x-2">
@@ -167,7 +214,7 @@
                     </button>
                     <button
                         on:click={handlePublish}
-                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 transition-colors"
+                        class="bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-500 transition-colors"
                     >
                         Publish
                     </button>
@@ -184,7 +231,7 @@
                         placeholder="Add tags (press Enter)"
                         bind:value={tagInput}
                         on:keydown={addTag}
-                        class="flex-1 p-2 bg-zinc-700 border border-zinc-600 rounded focus:outline-none focus:border-blue-500"
+                        class="flex-1 p-2 bg-zinc-700 border border-zinc-600 rounded focus:outline-none focus:border-cyan-500"
                     />
                 </div>
 
@@ -208,7 +255,7 @@
                 {/if}
             </div>
 
-            <!-- Markdown editor component - now without title input -->
+            <!-- Markdown editor component -->
             <div class="h-[calc(100vh-280px)]">
                 <MarkdownEditor
                     bind:content
