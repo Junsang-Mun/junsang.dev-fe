@@ -3,6 +3,7 @@
     import Header from "$lib/components/Header.svelte";
     import Footer from "$lib/components/Footer.svelte";
     import Card from "$lib/components/Card.svelte";
+    import SearchBar from "$lib/components/SearchBar.svelte";
 
     let posts = [];
     let selectedTag = null;
@@ -37,7 +38,17 @@
 <div class="flex flex-col h-screen bg-zinc-900">
     <Header title="junsang.dev" />
     <main class="flex-1 overflow-y-auto container mx-auto p-4">
-        <h1 class="text-3xl font-bold mb-6 text-zinc-100">Latest Posts</h1>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="md:col-span-2">
+                <h1 class="text-3xl font-bold mb-2 text-zinc-100">
+                    Latest Posts
+                </h1>
+            </div>
+            <div class="md:col-span-1">
+                <SearchBar placeholder="Search articles..." />
+            </div>
+        </div>
+
         {#if allTags.length > 0}
             <div class="mb-4 flex flex-wrap gap-2">
                 {#each allTags as tag}
@@ -62,7 +73,7 @@
             {/each}
         {:else if posts.length === 0}
             <p class="text-lg text-zinc-300">
-                If you're seeing this, it means I haven’t written a single word.
+                If you're seeing this, it means I haven't written a single word.
             </p>
         {:else}
             {#each posts as post}

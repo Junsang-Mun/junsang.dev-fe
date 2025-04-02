@@ -2,6 +2,7 @@
     import Header from "$lib/components/Header.svelte";
     import Footer from "$lib/components/Footer.svelte";
     import Card from "$lib/components/Card.svelte";
+    import SearchBar from "$lib/components/SearchBar.svelte";
     import { onMount } from "svelte";
     import { goto } from "$app/navigation";
 
@@ -59,9 +60,19 @@
             </div>
 
             <div class="bg-zinc-800 p-4 rounded-lg col-span-1 md:col-span-3">
-                <h1 class="text-2xl font-bold mb-4 text-zinc-100">
-                    Edit posts
-                </h1>
+                <div
+                    class="flex flex-col md:flex-row md:items-center md:justify-between mb-4"
+                >
+                    <h1 class="text-2xl font-bold text-zinc-100 mb-2 md:mb-0">
+                        Edit posts
+                    </h1>
+                    <div class="md:w-1/2">
+                        <SearchBar
+                            isKonsole={true}
+                            placeholder="Search your drafts and posts..."
+                        />
+                    </div>
+                </div>
 
                 {#if posts.length === 0}
                     <p class="text-zinc-400 text-center py-20">
