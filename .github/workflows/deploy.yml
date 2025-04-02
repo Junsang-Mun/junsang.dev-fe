@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -32,64 +33,58 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          echo "${{ secrets.SSH_PUBLIC_KEY }}" >> ~/.ssh/known_hosts
+
+          # Add server to known_hosts
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
           # Test SSH connection
-          ssh -o StrictHostKeyChecking=accept-new deploy@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
+          ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
 
       - name: Create deployment directories
         run: |
-          ssh deploy@${{ secrets.SSH_HOST }} "mkdir -p ~/blog/prisma ~/backups"
+          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "mkdir -p ~/blog/prisma ~/backups"
 
       - name: Backup database if exists
         run: |
-          ssh deploy@${{ secrets.SSH_HOST }} "if [ -f ~/blog/prisma/post.db ]; then cp ~/blog/prisma/post.db ~/backups/post_backup_\$(date +%Y%m%d_%H%M%S).db; fi"
+          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "if [ -f ~/blog/prisma/post.db ]; then cp ~/blog/prisma/post.db ~/backups/post_backup_\$(date +%Y%m%d_%H%M%S).db; fi"
 
       - name: Deploy files with rsync
         run: |
-          rsync -avz --exclude='.git' --exclude='node_modules' --exclude='.env' --exclude='prisma/post.db' ./ deploy@${{ secrets.SSH_HOST }}:~/blog/
+          rsync -avz --exclude='.git' --exclude='node_modules' --exclude='.env' --exclude='prisma/post.db' ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/blog/
 
       - name: Run post-deployment commands
         run: |
-          ssh deploy@${{ secrets.SSH_HOST }} "
+          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "
             # Load environment
             source ~/.profile
             source ~/.bashrc
             export NVM_DIR=\"\$HOME/.nvm\"
             [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"
 
-            # Create SQLite database file if it doesn't exist
+            # Ensure SQLite DB exists
             touch ~/blog/prisma/post.db
             chmod 644 ~/blog/prisma/post.db
-
-            # Set up .env file if it doesn't exist
-            if [ ! -f ~/blog/.env ]; then
-              cat > ~/blog/.env << EOL
-            DATABASE_URL=\"file:./prisma/post.db\"
-            PORT=3000
-            NODE_ENV=production
-            EOL
-            fi
 
             # Navigate to app directory
             cd ~/blog
 
-            # Install dependencies
-            echo \"Installing dependencies...\"
+            # Install production dependencies
+            echo 'Installing dependencies...'
             npm install --omit=dev
 
             # Generate Prisma client
-            echo \"Generating Prisma client...\"
+            echo 'Generating Prisma client...'
             npx prisma generate
 
-            # Run database migrations
-            echo \"Running database migrations...\"
+            # Run migrations
+            echo 'Running database migrations...'
             npx prisma migrate deploy
 
-            # Start the application with PM2
-            echo \"Starting application with PM2...\"
-            pm2 stop blog || echo \"No existing blog process to stop\"
-            pm2 start build/index.js --name \"blog\"
+            # Restart app with PM2
+            echo 'Starting application with PM2...'
+            pm2 delete blog || true
+            pm2 start build/index.js --name 'blog'
             pm2 save
 
-            echo \"Deployment completed successfully!\"
+            echo '✅ Deployment completed!'
           "
