@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
   return {
-    plugins: [sveltekit()],
+    plugins: [tailwindcss(), sveltekit()],
     define: {
       "import.meta.env.VITE_GITHUB_CLIENT_ID": JSON.stringify(
         env.VITE_GITHUB_CLIENT_ID,
