@@ -7,7 +7,6 @@ on:
 
 jobs:
   deploy:
-    environment: Deploy
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -28,7 +27,27 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Deploy to VM
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create deployment directories
+        run: |
+          ssh deploy@${{ secrets.SSH_HOST }} "mkdir -p ~/blog/prisma ~/backups"
+
+      - name: Backup database if exists
+        run: |
+          ssh deploy@${{ secrets.SSH_HOST }} "if [ -f ~/blog/prisma/database.db ]; then cp ~/blog/prisma/database.db ~/backups/database_backup_\$(date +%Y%m%d_%H%M%S).db; fi"
+
+      - name: Deploy files with rsync
+        run: |
+          # Transfer files directly from runner to server
+          rsync -avz --exclude='.git' --exclude='node_modules' --exclude='prisma/database.db' --exclude='.env' ./ deploy@${{ secrets.SSH_HOST }}:~/blog/
+
+      - name: Run post-deployment commands
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -36,62 +55,23 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            # Load the shell profile explicitly
+            # Load environment
             source ~/.profile
             source ~/.bashrc
-
-            # If using NVM, explicitly load it
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-            # Check if tools are available now
+            # Print debug info
             echo "Node.js version:"
             node --version
             echo "npm version:"
             npm --version
-            echo "PM2 version:"
-            which pm2 && pm2 --version
-
-            # Create deployment directory structure if it doesn't exist
-            mkdir -p ~/blog/prisma
 
             # Create SQLite database file if it doesn't exist
             touch ~/blog/prisma/database.db
-
-            # Ensure proper permissions
-            chmod 755 ~/blog
-            chmod 755 ~/blog/prisma
             chmod 644 ~/blog/prisma/database.db
 
-            # Create a temp directory for the deployment
-            DEPLOY_TEMP_DIR=$(mktemp -d)
-
-            # Clone the repository to the temp directory
-            # For public repositories:
-            cd $DEPLOY_TEMP_DIR
-            git clone --depth 1 https://github.com/Junsang-Mun/junsang.dev-fe.git .
-
-            # For private repositories, use a token:
-            # git clone --depth 1 https://${{ secrets.GH_TOKEN }}@github.com/Junsang-Mun/junsang.dev-fe.git .
-
-            # Install production dependencies
-            npm ci --production
-
-            # Generate Prisma client
-            npx prisma generate
-
-            # Stop the running application (if exists)
-            pm2 stop blog || true
-
-            # Create backup of the database
-            TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-            mkdir -p ~/backups
-            cp ~/blog/prisma/database.db ~/backups/database_backup_$TIMESTAMP.db
-
-            # Copy the new code, preserving the database file
-            rsync -av --exclude='.git' --exclude='node_modules' --exclude='prisma/database.db' --exclude='.env' ./ ~/blog/
-
-            # Set up .env file if it doesn't exist (first deployment)
+            # Set up .env file if it doesn't exist
             if [ ! -f ~/blog/.env ]; then
               cat > ~/blog/.env << EOL
             DATABASE_URL="file:./prisma/database.db"
@@ -100,24 +80,25 @@ jobs:
             EOL
             fi
 
-            # Navigate to app directory and install dependencies
+            # Navigate to app directory
             cd ~/blog
-            npm ci --production
 
-            # Run database migrations (using Prisma)
+            # Install dependencies using npm install instead of npm ci
+            echo "Installing dependencies..."
+            npm install --omit=dev
+
+            # Generate Prisma client
+            echo "Generating Prisma client..."
+            npx prisma generate
+
+            # Run database migrations
+            echo "Running database migrations..."
             npx prisma migrate deploy
 
             # Start the application with PM2
-            # For SvelteKit with adapter-node, use the index.js file in the build directory
-            pm2 start build/index.js --name "blog" -- --port 3000
-
-            # Alternative for package.json scripts
-            # pm2 start npm --name "blog" -- run start
-
-            # Save PM2 process list
+            echo "Starting application with PM2..."
+            pm2 stop blog || echo "No existing blog process to stop"
+            pm2 start build/index.js --name "blog"
             pm2 save
-
-            # Clean up
-            rm -rf $DEPLOY_TEMP_DIR
 
             echo "Deployment completed successfully!"
