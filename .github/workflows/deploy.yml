@@ -27,10 +27,17 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Create deployment package
+      - name: Create stable copy for deployment
         run: |
-          # Create a tar file with the application (excluding unnecessary files)
-          tar --exclude='.git' --exclude='node_modules' --exclude='.env' -czf deployment.tar.gz .
+          # Create a stable copy directory
+          mkdir -p /tmp/deploy-copy
+          # Copy files to the stable directory (excluding what we don't need)
+          rsync -a --exclude='.git' --exclude='node_modules' --exclude='.env' ./ /tmp/deploy-copy/
+          # Create the tar file from the stable copy
+          cd /tmp/deploy-copy
+          tar -czf /tmp/deployment.tar.gz .
+          # Move tar file back to workspace
+          mv /tmp/deployment.tar.gz $GITHUB_WORKSPACE/
 
       - name: Setup SSH key
         run: |
@@ -38,25 +45,25 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-          # Test SSH connection - this will fail the workflow if SSH connection fails
+          # Test SSH connection
           ssh -o StrictHostKeyChecking=accept-new deploy@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
 
-      - name: Deploy to server - Step 1 (Transfer files)
+      - name: Deploy to server - Transfer files
         run: scp deployment.tar.gz deploy@${{ secrets.SSH_HOST }}:~/deployment.tar.gz
 
-      - name: Deploy to server - Step 2 (Prepare directories)
+      - name: Deploy to server - Prepare directories
         run: |
           ssh deploy@${{ secrets.SSH_HOST }} "mkdir -p ~/blog/prisma ~/backups"
 
-      - name: Deploy to server - Step 3 (Backup database)
+      - name: Deploy to server - Backup database
         run: |
           ssh deploy@${{ secrets.SSH_HOST }} "if [ -f ~/blog/prisma/database.db ]; then cp ~/blog/prisma/database.db ~/backups/database_backup_\$(date +%Y%m%d_%H%M%S).db; fi"
 
-      - name: Deploy to server - Step 4 (Extract files)
+      - name: Deploy to server - Extract files
         run: |
           ssh deploy@${{ secrets.SSH_HOST }} "tar -xzf ~/deployment.tar.gz -C ~/blog --exclude='prisma/database.db'"
 
-      - name: Deploy to server - Step 5 (Setup files)
+      - name: Deploy to server - Setup files
         run: |
           ssh deploy@${{ secrets.SSH_HOST }} "
             touch ~/blog/prisma/database.db &&
@@ -68,22 +75,22 @@ jobs:
             fi
           "
 
-      - name: Deploy to server - Step 6 (Install dependencies)
+      - name: Deploy to server - Install dependencies
         run: |
           ssh deploy@${{ secrets.SSH_HOST }} "cd ~/blog && source ~/.profile && source ~/.bashrc && export NVM_DIR=\"\$HOME/.nvm\" && [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\" && npm install --omit=dev"
 
-      - name: Deploy to server - Step 7 (Generate Prisma client)
+      - name: Deploy to server - Generate Prisma client
         run: |
           ssh deploy@${{ secrets.SSH_HOST }} "cd ~/blog && source ~/.profile && source ~/.bashrc && export NVM_DIR=\"\$HOME/.nvm\" && [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\" && npx prisma generate"
 
-      - name: Deploy to server - Step 8 (Run migrations)
+      - name: Deploy to server - Run migrations
         run: |
           ssh deploy@${{ secrets.SSH_HOST }} "cd ~/blog && source ~/.profile && source ~/.bashrc && export NVM_DIR=\"\$HOME/.nvm\" && [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\" && npx prisma migrate deploy"
 
-      - name: Deploy to server - Step 9 (Start application)
+      - name: Deploy to server - Start application
         run: |
           ssh deploy@${{ secrets.SSH_HOST }} "cd ~/blog && source ~/.profile && source ~/.bashrc && export NVM_DIR=\"\$HOME/.nvm\" && [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\" && pm2 stop blog || true && pm2 start build/index.js --name \"blog\" && pm2 save"
 
-      - name: Deploy to server - Step 10 (Cleanup)
+      - name: Deploy to server - Cleanup
         run: |
           ssh deploy@${{ secrets.SSH_HOST }} "rm ~/deployment.tar.gz"
