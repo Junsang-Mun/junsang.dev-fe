@@ -23,6 +23,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Create .env.production file
+        run: |
+          echo "VITE_REDIRECT_URI=${{ secrets.ENV_VITE_REDIRECT_URI }}" >> .env.production
+          echo "VITE_GITHUB_CLIENT_SECRET=${{ secrets.ENV_VITE_GITHUB_CLIENT_SECRET }}" >> .env.production
+          echo "VITE_GITHUB_CLIENT_ID=${{ secrets.ENV_VITE_GITHUB_CLIENT_ID }}" >> .env.production
+          echo "VITE_ADMIN_EMAIL=${{ secrets.ENV_VITE_ADMIN_EMAIL }}" >> .env.production
+
       - name: Build application
         run: npm run build
 
