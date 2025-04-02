@@ -36,11 +36,21 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            # Print Node.js and npm versions
+            # Load the shell profile explicitly
+            source ~/.profile
+            source ~/.bashrc
+
+            # If using NVM, explicitly load it
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+            # Check if tools are available now
             echo "Node.js version:"
             node --version
             echo "npm version:"
             npm --version
+            echo "PM2 version:"
+            which pm2 && pm2 --version
 
             # Create deployment directory structure if it doesn't exist
             mkdir -p ~/blog/prisma
