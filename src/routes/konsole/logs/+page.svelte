@@ -91,7 +91,10 @@
                 <!-- Filters -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label class="block text-zinc-400 mb-1">Path</label>
+                        <label
+                            for="path-filter"
+                            class="block text-zinc-400 mb-1">Path</label
+                        >
                         <input
                             type="text"
                             bind:value={pathFilter}
@@ -100,7 +103,7 @@
                         />
                     </div>
                     <div>
-                        <label class="block text-zinc-400 mb-1"
+                        <label for="ip-filter" class="block text-zinc-400 mb-1"
                             >IP Address</label
                         >
                         <input
@@ -111,7 +114,7 @@
                         />
                     </div>
                     <div>
-                        <label class="block text-zinc-400 mb-1"
+                        <label for="start-date" class="block text-zinc-400 mb-1"
                             >Start Date</label
                         >
                         <input
@@ -121,7 +124,9 @@
                         />
                     </div>
                     <div>
-                        <label class="block text-zinc-400 mb-1">End Date</label>
+                        <label for="end-date" class="block text-zinc-400 mb-1"
+                            >End Date</label
+                        >
                         <input
                             type="date"
                             bind:value={endDate}

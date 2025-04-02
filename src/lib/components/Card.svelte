@@ -10,10 +10,20 @@
     function handleClick() {
         goto(link);
     }
+
+    function handleKeyDown(event) {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            goto(link);
+        }
+    }
 </script>
 
-<article
+<div
+    role="button"
+    tabindex="0"
     on:click={handleClick}
+    on:keydown={handleKeyDown}
     class={`bg-zinc-800 shadow-md rounded-lg overflow-hidden cursor-pointer hover:ring hover:ring-cyan-500 transition ${className}`}
 >
     <div class="p-4">
@@ -27,4 +37,4 @@
         {/if}
         <div class="text-zinc-400 text-sm">{date}</div>
     </div>
-</article>
+</div>

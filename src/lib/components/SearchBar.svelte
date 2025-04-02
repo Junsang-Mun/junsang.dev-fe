@@ -140,6 +140,7 @@
                     searchResults = [];
                 }}
                 class="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-400 hover:text-zinc-200"
+                aria-label="Clear search"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
