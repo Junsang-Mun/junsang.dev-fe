@@ -9,34 +9,18 @@
     export let tags = [];
     let tagInput = "";
 
-    // Utility function to escape special characters in strings
-    function escapeString(str) {
-        if (typeof str !== "string") return str;
-        return str
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-
-    // Tag handling functions
     function addTag(event) {
-        // Add tag on Enter key press, prevent form submission
         if (event.key === "Enter" && tagInput.trim()) {
             event.preventDefault();
 
-            // Sanitize tag input
-            const sanitizedTag = escapeString(tagInput.trim());
+            const newTag = tagInput.trim();
 
-            // Don't add if the tag already exists
-            if (!tags.includes(sanitizedTag) && sanitizedTag) {
-                tags = [...tags, sanitizedTag];
-                // Immediately save to localStorage when a tag is added
+            if (!tags.includes(newTag) && newTag) {
+                tags = [...tags, newTag];
                 saveToLocalStorage();
             }
 
-            tagInput = ""; // Clear the input
+            tagInput = "";
         }
     }
 
@@ -71,9 +55,9 @@
     // Prepare payload for API with escaped data
     function preparePostPayload(isPublished) {
         return {
-            title: escapeString(title),
-            content: escapeString(content),
-            tags: tags.map((tag) => escapeString(tag)),
+            title: title,
+            content: content,
+            tags: tags,
             published: isPublished,
         };
     }

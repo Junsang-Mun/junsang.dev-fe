@@ -9,7 +9,23 @@
     export let data;
     const user = data.user;
 
+    let stats = null;
+    let statsLoading = true;
+
     let posts = [];
+
+    async function loadStats() {
+        try {
+            const res = await fetch("/api/stats");
+            if (res.ok) {
+                stats = await res.json();
+            }
+        } catch (err) {
+            console.error("Failed to load stats:", err);
+        } finally {
+            statsLoading = false;
+        }
+    }
 
     onMount(async () => {
         const res = await fetch("/api/allPosts");
@@ -21,6 +37,7 @@
             link: `/posts/${post.id}`,
             summary: post.content?.slice(0, 100) ?? "",
         }));
+        loadStats();
     });
 </script>
 
@@ -43,6 +60,99 @@
             >
         </div>
 
+        <div class="bg-zinc-800 p-4 rounded-lg mb-4">
+            <h2 class="text-xl font-bold text-zinc-100 mb-4">
+                Visitor Statistics
+            </h2>
+
+            {#if statsLoading}
+                <p class="text-zinc-400">Loading statistics...</p>
+            {:else if stats}
+                <div
+                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4"
+                >
+                    <div class="bg-zinc-700 p-3 rounded">
+                        <h3 class="text-sm text-zinc-400">Today</h3>
+                        <p class="text-2xl font-bold text-cyan-400">
+                            {stats.visitors.today}
+                        </p>
+                    </div>
+                    <div class="bg-zinc-700 p-3 rounded">
+                        <h3 class="text-sm text-zinc-400">Yesterday</h3>
+                        <p class="text-2xl font-bold text-zinc-100">
+                            {stats.visitors.yesterday}
+                        </p>
+                    </div>
+                    <div class="bg-zinc-700 p-3 rounded">
+                        <h3 class="text-sm text-zinc-400">This Week</h3>
+                        <p class="text-2xl font-bold text-zinc-100">
+                            {stats.visitors.week}
+                        </p>
+                    </div>
+                    <div class="bg-zinc-700 p-3 rounded">
+                        <h3 class="text-sm text-zinc-400">This Month</h3>
+                        <p class="text-2xl font-bold text-zinc-100">
+                            {stats.visitors.month}
+                        </p>
+                    </div>
+                    <div class="bg-zinc-700 p-3 rounded">
+                        <h3 class="text-sm text-zinc-400">All Time</h3>
+                        <p class="text-2xl font-bold text-zinc-100">
+                            {stats.visitors.total}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-zinc-100 mb-2">
+                            Popular Pages
+                        </h3>
+                        <ul class="space-y-1">
+                            {#each stats.popularPages as page}
+                                <li class="flex justify-between text-sm">
+                                    <span class="text-zinc-300 truncate"
+                                        >{page.path}</span
+                                    >
+                                    <span class="text-cyan-400 ml-2"
+                                        >{page.count}</span
+                                    >
+                                </li>
+                            {/each}
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-zinc-100 mb-2">
+                            Top Referrers
+                        </h3>
+                        <ul class="space-y-1">
+                            {#each stats.topReferrers as ref}
+                                <li class="flex justify-between text-sm">
+                                    <span class="text-zinc-300 truncate"
+                                        >{ref.referrer}</span
+                                    >
+                                    <span class="text-cyan-400 ml-2"
+                                        >{ref.count}</span
+                                    >
+                                </li>
+                            {/each}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <a
+                        href="/konsole/logs"
+                        class="text-cyan-500 hover:underline"
+                        >View detailed logs →</a
+                    >
+                </div>
+            {:else}
+                <p class="text-zinc-400">Failed to load statistics</p>
+            {/if}
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div class="bg-zinc-800 p-4 rounded-lg col-span-1">
                 <nav class="flex flex-col space-y-2">
@@ -55,6 +165,11 @@
                         href="/konsole/new"
                         class="text-zinc-100 hover:text-cyan-400 py-2"
                         >Write a new post</a
+                    >
+                    <a
+                        href="/konsole/logs"
+                        class="text-zinc-100 hover:text-cyan-400 py-2"
+                        >Visitor Logs</a
                     >
                 </nav>
             </div>
