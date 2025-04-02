@@ -27,78 +27,63 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
+      - name: Create deployment package
+        run: |
+          # Create a tar file with the application (excluding unnecessary files)
+          tar --exclude='.git' --exclude='node_modules' --exclude='.env' -czf deployment.tar.gz .
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          # Test SSH connection - this will fail the workflow if SSH connection fails
+          ssh -o StrictHostKeyChecking=accept-new deploy@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
 
-      - name: Create deployment directories
+      - name: Deploy to server - Step 1 (Transfer files)
+        run: scp deployment.tar.gz deploy@${{ secrets.SSH_HOST }}:~/deployment.tar.gz
+
+      - name: Deploy to server - Step 2 (Prepare directories)
         run: |
           ssh deploy@${{ secrets.SSH_HOST }} "mkdir -p ~/blog/prisma ~/backups"
 
-      - name: Backup database if exists
+      - name: Deploy to server - Step 3 (Backup database)
         run: |
           ssh deploy@${{ secrets.SSH_HOST }} "if [ -f ~/blog/prisma/database.db ]; then cp ~/blog/prisma/database.db ~/backups/database_backup_\$(date +%Y%m%d_%H%M%S).db; fi"
 
-      - name: Deploy files with rsync
+      - name: Deploy to server - Step 4 (Extract files)
         run: |
-          # Transfer files directly from runner to server
-          rsync -avz --exclude='.git' --exclude='node_modules' --exclude='prisma/database.db' --exclude='.env' ./ deploy@${{ secrets.SSH_HOST }}:~/blog/
+          ssh deploy@${{ secrets.SSH_HOST }} "tar -xzf ~/deployment.tar.gz -C ~/blog --exclude='prisma/database.db'"
 
-      - name: Run post-deployment commands
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: deploy
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            # Load environment
-            source ~/.profile
-            source ~/.bashrc
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-            # Print debug info
-            echo "Node.js version:"
-            node --version
-            echo "npm version:"
-            npm --version
-
-            # Create SQLite database file if it doesn't exist
-            touch ~/blog/prisma/database.db
-            chmod 644 ~/blog/prisma/database.db
-
-            # Set up .env file if it doesn't exist
+      - name: Deploy to server - Step 5 (Setup files)
+        run: |
+          ssh deploy@${{ secrets.SSH_HOST }} "
+            touch ~/blog/prisma/database.db &&
+            chmod 644 ~/blog/prisma/database.db &&
             if [ ! -f ~/blog/.env ]; then
-              cat > ~/blog/.env << EOL
-            DATABASE_URL="file:./prisma/database.db"
-            PORT=3000
-            NODE_ENV=production
-            EOL
+              echo 'DATABASE_URL=\"file:./prisma/database.db\"' > ~/blog/.env &&
+              echo 'PORT=3000' >> ~/blog/.env &&
+              echo 'NODE_ENV=production' >> ~/blog/.env;
             fi
+          "
 
-            # Navigate to app directory
-            cd ~/blog
+      - name: Deploy to server - Step 6 (Install dependencies)
+        run: |
+          ssh deploy@${{ secrets.SSH_HOST }} "cd ~/blog && source ~/.profile && source ~/.bashrc && export NVM_DIR=\"\$HOME/.nvm\" && [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\" && npm install --omit=dev"
 
-            # Install dependencies using npm install instead of npm ci
-            echo "Installing dependencies..."
-            npm install --omit=dev
+      - name: Deploy to server - Step 7 (Generate Prisma client)
+        run: |
+          ssh deploy@${{ secrets.SSH_HOST }} "cd ~/blog && source ~/.profile && source ~/.bashrc && export NVM_DIR=\"\$HOME/.nvm\" && [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\" && npx prisma generate"
 
-            # Generate Prisma client
-            echo "Generating Prisma client..."
-            npx prisma generate
+      - name: Deploy to server - Step 8 (Run migrations)
+        run: |
+          ssh deploy@${{ secrets.SSH_HOST }} "cd ~/blog && source ~/.profile && source ~/.bashrc && export NVM_DIR=\"\$HOME/.nvm\" && [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\" && npx prisma migrate deploy"
 
-            # Run database migrations
-            echo "Running database migrations..."
-            npx prisma migrate deploy
+      - name: Deploy to server - Step 9 (Start application)
+        run: |
+          ssh deploy@${{ secrets.SSH_HOST }} "cd ~/blog && source ~/.profile && source ~/.bashrc && export NVM_DIR=\"\$HOME/.nvm\" && [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\" && pm2 stop blog || true && pm2 start build/index.js --name \"blog\" && pm2 save"
 
-            # Start the application with PM2
-            echo "Starting application with PM2..."
-            pm2 stop blog || echo "No existing blog process to stop"
-            pm2 start build/index.js --name "blog"
-            pm2 save
-
-            echo "Deployment completed successfully!"
+      - name: Deploy to server - Step 10 (Cleanup)
+        run: |
+          ssh deploy@${{ secrets.SSH_HOST }} "rm ~/deployment.tar.gz"
