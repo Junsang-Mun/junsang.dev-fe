@@ -121,7 +121,7 @@
                     >GitHub</a
                 >
                 <a
-                    href="www.linkedin.com/in/준상-문-b567b027a"
+                    href="https://www.linkedin.com/in/준상-문-b567b027a"
                     class="text-cyan-500">LinkedIn</a
                 >
                 <!-- <a href="/resume.pdf" class="text-cyan-500">Resume PDF</a> -->
