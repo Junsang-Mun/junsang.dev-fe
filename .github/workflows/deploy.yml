@@ -32,7 +32,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          echo "${{ secrets.SSH_PUBLIC_KEY }}" >> ~/.ssh/known_hosts
           # Test SSH connection
           ssh -o StrictHostKeyChecking=accept-new deploy@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
 
@@ -42,7 +42,7 @@ jobs:
 
       - name: Backup database if exists
         run: |
-          ssh deploy@${{ secrets.SSH_HOST }} "if [ -f ~/blog/prisma/post.db ]; then cp ~/blog/prisma/post.db ~/backups/database_backup_\$(date +%Y%m%d_%H%M%S).db; fi"
+          ssh deploy@${{ secrets.SSH_HOST }} "if [ -f ~/blog/prisma/post.db ]; then cp ~/blog/prisma/post.db ~/backups/post_backup_\$(date +%Y%m%d_%H%M%S).db; fi"
 
       - name: Deploy files with rsync
         run: |
