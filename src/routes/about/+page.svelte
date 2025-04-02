@@ -5,16 +5,8 @@
 
     const experience = [
         {
-            role: "Nogada master",
-            organization: "ACME Corp",
-            period: "Jan 2020 - Present",
-            description:
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-            // logo: "https://http.cat/404",
-        },
-        {
-            role: "Sensei",
-            organization: "Kibotos",
+            role: "선생님",
+            organization: "키보토스",
             period: "Jun 2022 - Present",
             description: "Teaching students how to fight",
             // logo: "https://http.cat/404",
@@ -37,15 +29,17 @@
 
     const projects = [
         {
-            name: "Project 1",
-            description: "asdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfsdfasdf",
+            name: "Placeholder for now",
+            description:
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
             techStack: "Svelte, Tailwind CSS",
             link: "https://http.cat/404",
         },
         {
-            name: "Project 2",
-            description: "asdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfsdfasdf",
-            techStack: "Svelte, Tailwind CSS",
+            name: "Cat",
+            description:
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+            techStack: "Lorem, Ipsum",
             link: "https://http.cat/404",
         },
     ];
@@ -127,18 +121,19 @@
                     >GitHub</a
                 >
                 <a
-                    href="https://linked.in/aaaaaaaaaaaaaaaaa"
+                    href="www.linkedin.com/in/준상-문-b567b027a"
                     class="text-cyan-500">LinkedIn</a
                 >
-                <a href="/resume.pdf" class="text-cyan-500">Resume PDF</a>
+                <!-- <a href="/resume.pdf" class="text-cyan-500">Resume PDF</a> -->
             </div>
         </section>
 
         <section class="mb-6">
             <h2 class="text-2xl font-bold mb-4 text-zinc-100">About Me</h2>
             <p class="text-zinc-100">
-                I'm a sensei, teaching students how to fight. I'm also a nogada
-                master.
+                I'm a sensei, teaching students how to fight. I'm also a doctor
+                in Rhodos Island, fighting against the originium infection. In
+                my free time, I take care of butter at Elias.
             </p>
         </section>
 
