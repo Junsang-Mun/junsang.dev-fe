@@ -2,8 +2,8 @@ name: Deploy to VM
 
 on:
   push:
-    branches: [main] # or master, or whatever your main branch is named
-  workflow_dispatch: # Allows manual triggering
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -56,8 +56,12 @@ jobs:
             DEPLOY_TEMP_DIR=$(mktemp -d)
 
             # Clone the repository to the temp directory
+            # For public repositories:
             cd $DEPLOY_TEMP_DIR
-            git clone --depth 1 https://github.com/Junsang-Mun/blog.git .
+            git clone --depth 1 https://github.com/Junsang-Mun/junsang.dev-fe.git .
+
+            # For private repositories, use a token:
+            # git clone --depth 1 https://${{ secrets.GH_TOKEN }}@github.com/Junsang-Mun/junsang.dev-fe.git .
 
             # Install production dependencies
             npm ci --production
@@ -66,7 +70,7 @@ jobs:
             npx prisma generate
 
             # Stop the running application (if exists)
-            pm2 stop myapp || true
+            pm2 stop blog || true
 
             # Create backup of the database
             TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
@@ -93,7 +97,11 @@ jobs:
             npx prisma migrate deploy
 
             # Start the application with PM2
-            pm2 start npm --name "myapp" -- start
+            # For SvelteKit with adapter-node, use the index.js file in the build directory
+            pm2 start build/index.js --name "blog" -- --port 3000
+
+            # Alternative for package.json scripts
+            # pm2 start npm --name "blog" -- run start
 
             # Save PM2 process list
             pm2 save
