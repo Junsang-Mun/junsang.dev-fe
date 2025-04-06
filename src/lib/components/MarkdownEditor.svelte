@@ -17,6 +17,10 @@
     let splitPosition = 50; // Default split at 50%
     let containerWidth;
     let startX;
+    let textareaElement;
+    let displayContent = ""; // Only for display in editor
+    let isProcessingDisplay = false;
+    let imageMap = new Map(); // Map to track image placeholder mappings
 
     // Update preview whenever content changes
     $: {
@@ -54,10 +58,208 @@
         document.body.classList.remove("select-none");
     }
 
+    // Image paste handler
+    async function handlePaste(event) {
+        const items = event.clipboardData?.items;
+        if (!items) return;
+
+        let hasHandledImage = false;
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+
+            // Check if the clipboard item is an image
+            if (item.type.indexOf("image") === 0) {
+                event.preventDefault(); // Prevent default paste behavior
+
+                // Get the image as a blob
+                const blob = item.getAsFile();
+                if (!blob) continue;
+
+                try {
+                    // Convert blob to base64
+                    const base64 = await blobToBase64(blob);
+
+                    // Insert the image at cursor position
+                    insertImageAtCursor(base64, blob.type);
+                    hasHandledImage = true;
+                    break;
+                } catch (error) {
+                    console.error("Failed to process pasted image:", error);
+                }
+            }
+        }
+    }
+
+    // Convert blob to base64
+    function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    // Generate a unique ID for an image
+    function generateImageId() {
+        return `img-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    }
+
+    // Insert image at cursor position
+    function insertImageAtCursor(base64, mimeType) {
+        if (!textareaElement) return;
+
+        const filename = `pasted-image-${Date.now()}.${mimeType.split("/")[1] || "png"}`;
+        const imageId = generateImageId();
+
+        // Store full image data in our map
+        imageMap.set(imageId, {
+            alt: filename,
+            data: base64,
+        });
+
+        // Create the actual markdown for the real content
+        const fullMarkdown = `![${filename}](${base64})`;
+
+        // Create a placeholder for display
+        const placeholderMarkdown = `![🖼️ ${filename}](image-${imageId})`;
+
+        // Get cursor position
+        const start = textareaElement.selectionStart;
+        const end = textareaElement.selectionEnd;
+
+        // Update real content with the full image markdown
+        content =
+            content.substring(0, start) + fullMarkdown + content.substring(end);
+
+        // Update display content directly
+        displayContent =
+            displayContent.substring(0, start) +
+            placeholderMarkdown +
+            displayContent.substring(end);
+
+        // Update cursor position
+        setTimeout(() => {
+            const newPos = start + placeholderMarkdown.length;
+            textareaElement.selectionStart = newPos;
+            textareaElement.selectionEnd = newPos;
+            textareaElement.focus();
+        }, 0);
+    }
+
+    // Synchronize content from display to real
+    function syncFromDisplay() {
+        if (isProcessingDisplay) return;
+
+        isProcessingDisplay = true;
+
+        try {
+            // Process all display content into real content
+            // We'll go line by line to ensure line breaks are preserved
+
+            const displayLines = displayContent.split("\n");
+            const contentLines = content.split("\n");
+
+            // We'll build up new content by matching placeholder patterns
+            let newContent = [];
+
+            for (let i = 0; i < displayLines.length; i++) {
+                const line = displayLines[i];
+
+                // Check if line has an image placeholder
+                const placeholderMatch = line.match(
+                    /!\[🖼️ (.*?)\]\(image-(img-.*?)\)/,
+                );
+
+                if (placeholderMatch) {
+                    // This is a line with an image placeholder
+                    const [fullMatch, altText, imageId] = placeholderMatch;
+
+                    // Get the corresponding full image data
+                    const imageData = imageMap.get(imageId);
+
+                    if (imageData) {
+                        // Replace with the full markdown
+                        const fullMarkdown = `![${imageData.alt}](${imageData.data})`;
+                        newContent.push(line.replace(fullMatch, fullMarkdown));
+                    } else {
+                        // Keep as is if we don't have the data
+                        newContent.push(line);
+                    }
+                } else {
+                    // Just a regular line, keep as is
+                    newContent.push(line);
+                }
+            }
+
+            // Update real content
+            content = newContent.join("\n");
+        } finally {
+            isProcessingDisplay = false;
+        }
+    }
+
+    // Process content to create display version with collapsed images
+    function syncToDisplay() {
+        if (isProcessingDisplay) return;
+
+        isProcessingDisplay = true;
+
+        try {
+            // Clear existing image map
+            imageMap.clear();
+
+            // Process content line by line
+            const contentLines = content.split("\n");
+            const displayLines = [];
+
+            for (const line of contentLines) {
+                // Check if line has a full image
+                const imageMatch = line.match(
+                    /!\[(.*?)\]\((data:image\/[^;]+;base64,[^)]+)\)/,
+                );
+
+                if (imageMatch) {
+                    // This is a line with a full image
+                    const [fullMatch, altText, dataUrl] = imageMatch;
+
+                    // Generate an ID for this image
+                    const imageId = generateImageId();
+
+                    // Store in our map
+                    imageMap.set(imageId, {
+                        alt: altText,
+                        data: dataUrl,
+                    });
+
+                    // Replace with placeholder in display
+                    displayLines.push(
+                        line.replace(
+                            fullMatch,
+                            `![🖼️ ${altText}](image-${imageId})`,
+                        ),
+                    );
+                } else {
+                    // Just a regular line
+                    displayLines.push(line);
+                }
+            }
+
+            // Update display content
+            displayContent = displayLines.join("\n");
+        } finally {
+            isProcessingDisplay = false;
+        }
+    }
+
     onMount(async () => {
         // Dynamically import DOMPurify in browser
         const DOMPurifyModule = await import("dompurify");
         DOMPurify = DOMPurifyModule.default;
+
+        // Initial processing of display content
+        syncToDisplay();
 
         // Re-sanitize the content now that DOMPurify is available
         previewHtml = DOMPurify.sanitize(marked.parse(content));
@@ -80,7 +282,7 @@
                     "blog-draft",
                     JSON.stringify({
                         ...draftObj,
-                        savedContent: content,
+                        savedContent: content, // Save the REAL content with full image data
                     }),
                 );
             }
@@ -90,6 +292,11 @@
             clearInterval(autosaveInterval);
         };
     });
+
+    // Watch for changes to content and update display
+    $: if (content && !isProcessingDisplay) {
+        syncToDisplay();
+    }
 </script>
 
 <svelte:window
@@ -104,9 +311,13 @@
     >
         <div class="h-full overflow-hidden" style="width: {splitPosition}%">
             <textarea
-                bind:value={content}
+                bind:this={textareaElement}
+                bind:value={displayContent}
+                on:input={syncFromDisplay}
+                on:paste={handlePaste}
                 placeholder="Write your markdown here..."
                 class="w-full h-full p-4 bg-zinc-800 text-zinc-100 resize-none focus:outline-none font-mono"
+                spellcheck="false"
             ></textarea>
         </div>
 
@@ -132,3 +343,14 @@
         </div>
     </div>
 </div>
+
+<style>
+    /* Add styles for images in preview */
+    :global(.prose img) {
+        cursor: pointer;
+    }
+
+    :global(.prose img:hover) {
+        outline: 2px solid #06b6d4; /* cyan-500 */
+    }
+</style>
