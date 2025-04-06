@@ -3,13 +3,23 @@ import { json } from "@sveltejs/kit";
 
 const prismaAll = new PrismaClient();
 
-const sessionCookie = cookies.get("session");
+export async function GET({ cookies }) {
+  const sessionCookie = cookies.get("session");
+  let isAuthenticated = false;
 
-if (!sessionCookie) {
-  return new Response("Unauthorized", { status: 403 });
-}
+  if (sessionCookie) {
+    try {
+      JSON.parse(sessionCookie);
+      isAuthenticated = true;
+    } catch {
+      cookies.delete("session", { path: "/" });
+    }
+  }
 
-export async function GET() {
+  if (!isAuthenticated) {
+    return json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const posts = await prismaAll.post.findMany({
     orderBy: { createdAt: "desc" },
   });
