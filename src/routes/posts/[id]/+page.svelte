@@ -53,9 +53,11 @@
             {/if}
             <h1 class="text-3xl font-bold mb-2 text-zinc-100">{post.title}</h1>
             <p class="text-sm text-zinc-300 mb-6">
-                {new Date(post.createdAt).toLocaleString()}
+                {new Date(post.createdAt).toLocaleDateString()}
                 {#if post.updatedAt !== post.createdAt}
-                    &nbsp;• updated {new Date(post.updatedAt).toLocaleString()}
+                    &nbsp;• updated {new Date(
+                        post.updatedAt,
+                    ).toLocaleDateString()}
                 {/if}
             </p>
             <div
