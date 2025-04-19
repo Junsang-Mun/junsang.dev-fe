@@ -8,6 +8,10 @@
     let loading = true;
     let error = null;
 
+    let showClearModal = false;
+    let daysToKeep = "30";
+    let clearStatus = null;
+
     // Filter state
     let pathFilter = "";
     let ipFilter = "";
@@ -55,6 +59,38 @@
         if (newPage >= 1 && newPage <= pagination.totalPages) {
             pagination.page = newPage;
             fetchLogs();
+        }
+    }
+
+    async function clearOldLogs() {
+        try {
+            clearStatus = "pending";
+            const response = await fetch(`/api/logs/clear?days=${daysToKeep}`, {
+                method: "DELETE",
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            clearStatus = "success";
+            showClearModal = false;
+
+            // Show a temporary success message
+            error = null;
+            logs = [];
+            pagination.total = 0;
+            pagination.page = 1;
+
+            // Refresh logs after clearing
+            setTimeout(() => {
+                fetchLogs();
+            }, 500);
+        } catch (e) {
+            clearStatus = "error";
+            error = `Failed to clear logs: ${e.message}`;
+            console.error("Failed to clear logs:", e);
         }
     }
 
@@ -135,12 +171,19 @@
                     </div>
                 </div>
 
-                <div class="mb-4">
+                <div class="mb-4 flex space-x-4">
                     <button
                         on:click={applyFilters}
                         class="bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-500"
                     >
                         Apply Filters
+                    </button>
+
+                    <button
+                        on:click={() => (showClearModal = true)}
+                        class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-500"
+                    >
+                        Clear Old Logs
                     </button>
                 </div>
 
@@ -232,4 +275,43 @@
         </div>
     </main>
     <Footer />
+    {#if showClearModal}
+        <div
+            class="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+        >
+            <div class="bg-zinc-800 p-6 rounded-lg max-w-md w-full">
+                <h3 class="text-xl font-bold text-zinc-100 mb-4">Clear Logs</h3>
+                <p class="text-zinc-300 mb-4">
+                    Select how many days of logs to keep:
+                </p>
+
+                <div class="mb-4">
+                    <select
+                        bind:value={daysToKeep}
+                        class="w-full p-2 bg-zinc-700 border border-zinc-600 rounded"
+                    >
+                        <option value="7">Keep last 7 days</option>
+                        <option value="14">Keep last 14 days</option>
+                        <option value="30">Keep last 30 days</option>
+                        <option value="90">Keep last 90 days</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end space-x-3">
+                    <button
+                        on:click={() => (showClearModal = false)}
+                        class="px-4 py-2 bg-zinc-700 rounded hover:bg-zinc-600 text-zinc-100"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        on:click={clearOldLogs}
+                        class="px-4 py-2 bg-red-600 rounded hover:bg-red-500 text-zinc-100"
+                    >
+                        Clear Old Logs
+                    </button>
+                </div>
+            </div>
+        </div>
+    {/if}
 </div>
