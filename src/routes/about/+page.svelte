@@ -5,49 +5,42 @@
 
     const experience = [
         {
-            role: "선생님",
-            organization: "키보토스",
-            period: "Jun 2022 - Present",
-            description: "Teaching students how to fight",
+            role: "Customer Experience Specialist",
+            organization: "Business Canvas",
+            period: "Nov 2021 - Apr 2022",
+            description: [
+                "Identified pain points in the customer journey and proposed actionable improvements.",
+                "Collaborated with product and engineering teams to refine user flows and enhance customer satisfaction.",
+                "Developed communication strategies to improve feedback collection and boost user retention.",
+            ],
             // logo: "https://http.cat/404",
         },
         {
-            role: "박사님",
-            organization: "Rhodos Island",
-            period: "Jun 2022 - Present",
-            description: "Fighting against the originium infection",
-            // logo: "https://http.cat/404",
-        },
-        {
-            role: "꾜주니",
-            organization: "엘리아스",
-            period: "Jun 2022 - Present",
-            description: "버터에게 밥을 챙겨주는 역할을 맡고 있습니다",
+            role: "Freelance Designer",
+            organization: "Remote",
+            period: "2021 - Present",
+            description: [
+                "Focused on print design including posters, flyers, and business cards.",
+                "When needed, also provided logo design and developed cohesive brand identities to ensure a consistent visual experience.",
+                "Additionally, I took charge of the overall visual setup for event spaces, including layout and signage.",
+            ],
             // logo: "https://http.cat/404",
         },
     ];
 
     const projects = [
         {
-            name: "Placeholder for now",
-            description:
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+            name: "junsang.dev Personal Blog",
+            description: "",
             techStack: "Svelte, Tailwind CSS",
-            link: "https://http.cat/404",
-        },
-        {
-            name: "Cat",
-            description:
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-            techStack: "Lorem, Ipsum",
-            link: "https://http.cat/404",
+            link: "https://junsang.dev",
         },
     ];
 
     const skills = {
         languages: ["JavaScript", "C", "C++"],
-        frameworks: ["Svelte", "Node.js"],
-        tools: ["Git", "Docker", "Linux"],
+        frameworks: ["SvelteKit", "Node.js"],
+        tools: ["Git", "Docker/Podman", "Linux"],
         softSkills: ["Teamwork", "Problem-solving", "Communication"],
     };
 
@@ -84,23 +77,10 @@
             role: "Representative",
             organization: "Ubuntu Korea Community",
             dates: "2023 - Present",
-            description:
-                "Organized community events and meetups to promote open-source software.",
-        },
-    ];
-
-    const posts = [
-        {
-            title: "Hello World",
-            summary: "This is the first post on my new blog.",
-            date: "10/10/2020",
-            link: "/posts/hello-world",
-        },
-        {
-            title: "My Second Post",
-            summary: "This is the second post on my new blog.",
-            date: "10/11/2020",
-            link: "/posts/my-second-post",
+            description: [
+                "Led community events including tech meetups, UbuCon Korea, and Ubuntu workshops.",
+                "Actively promote open-source collaboration and represent the community in local and global initiatives.",
+            ],
         },
     ];
 </script>
@@ -131,9 +111,16 @@
         <section class="mb-6">
             <h2 class="text-2xl font-bold mb-4 text-zinc-100">About Me</h2>
             <p class="text-zinc-100">
-                I'm a sensei, teaching students how to fight. I'm also a doctor
-                in Rhodos Island, fighting against the originium infection. In
-                my free time, I take care of butter at Elias.
+                I'm a curious developer who learns best by building and sharing.
+                <br />
+                I enjoy diving into full-stack development, DevOps, and open-source
+                tools - especially when they help people collaborate better.
+                <br />
+                As a student at 42 Seoul and a representative of the Ubuntu Korea
+                Community, I’m passionate about growing developer communities and
+                creating spaces where people can learn from each other.
+                <br />
+                I believe the best tech is built together, not alone.
             </p>
         </section>
 
@@ -152,7 +139,53 @@
                     <p class="text-zinc-100">
                         {job.organization} | {job.period}
                     </p>
-                    <p class="text-zinc-100">{job.description}</p>
+                    {#if Array.isArray(job.description)}
+                        <ul class="list-disc pl-5 text-zinc-100">
+                            {#each job.description as point}
+                                <li>{point}</li>
+                            {/each}
+                        </ul>
+                    {:else}
+                        <p class="text-zinc-100">{job.description}</p>
+                    {/if}
+                </div>
+            {/each}
+        </section>
+
+        <section class="mb-6">
+            <h2 class="text-2xl font-bold mb-4 text-zinc-100">
+                Community & Volunteering
+            </h2>
+            {#each volunteering as vol}
+                <div class="mb-4">
+                    <h3 class="text-xl font-bold text-zinc-100">{vol.role}</h3>
+                    <p class="text-zinc-100">
+                        {vol.organization} | {vol.dates}
+                    </p>
+                    {#if Array.isArray(vol.description)}
+                        <ul class="list-disc pl-5 text-zinc-100">
+                            {#each vol.description as point}
+                                <li>{point}</li>
+                            {/each}
+                        </ul>
+                    {:else}
+                        <p class="text-zinc-100">{vol.description}</p>
+                    {/if}
+                </div>
+            {/each}
+        </section>
+
+        <section class="mb-6">
+            <h2 class="text-2xl font-bold mb-4 text-zinc-100">Education</h2>
+            {#each education as edu}
+                <div class="mb-4">
+                    <h3 class="text-xl font-bold text-zinc-100">
+                        {edu.school}
+                    </h3>
+                    <p class="text-zinc-100">
+                        {edu.program} | {edu.degree} | {edu.dates}
+                    </p>
+                    <p class="text-zinc-100">{edu.description}</p>
                 </div>
             {/each}
         </section>
@@ -192,22 +225,7 @@
             </div>
         </section>
 
-        <section class="mb-6">
-            <h2 class="text-2xl font-bold mb-4 text-zinc-100">Education</h2>
-            {#each education as edu}
-                <div class="mb-4">
-                    <h3 class="text-xl font-bold text-zinc-100">
-                        {edu.school}
-                    </h3>
-                    <p class="text-zinc-100">
-                        {edu.program} | {edu.degree} | {edu.dates}
-                    </p>
-                    <p class="text-zinc-100">{edu.description}</p>
-                </div>
-            {/each}
-        </section>
-
-        <section class="mb-6">
+        <!-- <section class="mb-6">
             <h2 class="text-2xl font-bold mb-4 text-zinc-100">
                 Certifications / Achievements
             </h2>
@@ -222,9 +240,9 @@
                     >
                 </div>
             {/each}
-        </section>
+        </section> -->
 
-        <section class="mb-6">
+        <!-- <section class="mb-6">
             <h2 class="text-2xl font-bold mb-4 text-zinc-100">
                 Talks / Presentations
             </h2>
@@ -239,51 +257,7 @@
                     >
                 </div>
             {/each}
-        </section>
-
-        <section class="mb-6">
-            <h2 class="text-2xl font-bold mb-4 text-zinc-100">
-                Community & Volunteering
-            </h2>
-            {#each volunteering as vol}
-                <div class="mb-4">
-                    <h3 class="text-xl font-bold text-zinc-100">{vol.role}</h3>
-                    <p class="text-zinc-100">
-                        {vol.organization} | {vol.dates}
-                    </p>
-                    <p class="text-zinc-100">{vol.description}</p>
-                </div>
-            {/each}
-        </section>
-
-        <section class="mb-6">
-            <h2 class="text-2xl font-bold mb-4 text-zinc-100">Blog</h2>
-            {#each posts as post}
-                <Card
-                    title={post.title}
-                    summary={post.summary}
-                    date={post.date}
-                    link={post.link}
-                    className="mb-4"
-                />
-            {/each}
-        </section>
-
-        <section class="mb-6">
-            <h2 class="text-2xl font-bold mb-4 text-zinc-100">Contact</h2>
-            <a href="mailto:junsang@example.com" class="text-cyan-500"
-                >Email Me</a
-            >
-            <div class="flex space-x-4 mt-4">
-                <a href="https://github.com/junsangmoon" class="text-cyan-500"
-                    >GitHub</a
-                >
-                <a
-                    href="https://linkedin.com/in/junsangmoon"
-                    class="text-cyan-500">LinkedIn</a
-                >
-            </div>
-        </section>
+        </section> -->
     </main>
     <Footer />
 </div>
