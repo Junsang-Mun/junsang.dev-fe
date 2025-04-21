@@ -33,6 +33,33 @@
     }
 </script>
 
+<svelte:head>
+    <title>{post ? post.title : "Loading..."}</title>
+    {#if post}
+        <meta property="og:title" content={post.title} />
+        <meta
+            property="og:description"
+            content={post.description || "Read this amazing post!"}
+        />
+        <meta property="og:image" content={`/api/og/${post.id}`} />
+        <meta property="og:type" content="article" />
+        <meta
+            property="og:url"
+            content={`https://junsang.dev/posts/${post.id}`}
+        />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={post.title} />
+        <meta
+            name="twitter:description"
+            content={post.description || "Read this amazing post!"}
+        />
+        <meta
+            name="twitter:image"
+            content={`https://junsang.dev/api/og/${post.id}`}
+        />
+    {/if}
+</svelte:head>
+
 <div class="flex flex-col h-screen bg-zinc-900">
     <Header title="junsang.dev" />
     <main class="flex-1 overflow-y-auto container mx-auto p-4">
