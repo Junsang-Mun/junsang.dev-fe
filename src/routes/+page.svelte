@@ -39,14 +39,14 @@
     <title>Junsang.dev}</title>
     <meta property="og:title" content="junsang.dev" />
     <meta property="og:description" content="a Personal Blog" />
-    <meta property="og:image" content={`$lib/og_default.png`} />
+    <meta property="og:image" content={`/images/og_default.png`} />
     <meta property="og:url" content={`https://junsang.dev/`} />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="junsang.dev" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="junsang.dev" />
     <meta name="twitter:description" content="a Personal Blog" />
-    <meta name="twitter:image" content={`$lib/og_default.png`} />
+    <meta name="twitter:image" content={`/images/og_default.png`} />
 </svelte:head>
 
 <div class="flex flex-col h-screen bg-zinc-900">
