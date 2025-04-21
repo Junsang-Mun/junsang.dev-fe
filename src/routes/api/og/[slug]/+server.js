@@ -5,58 +5,49 @@ import path from "path";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-
-// Load the 42dot Sans font
 const fontPath = path.resolve("./src/lib/fonts/42dotSans.ttf");
 const fontData = fs.readFileSync(fontPath);
 
 export const GET = async ({ params }) => {
   const { slug } = params;
-
-  // Fetch the blog post data
   const post = await getPostData(slug);
-  if (!post) {
-    return new Response("Post not found", { status: 404 });
-  }
+
+  if (!post) return new Response("Post not found", { status: 404 });
 
   const { title, content, tags } = post;
 
-  // Generate the SVG using satori
   const svg = await satori(
     {
       type: "div",
       props: {
         style: {
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          alignItems: "center",
           width: "1200px",
           height: "630px",
-          backgroundColor: "#18181b", // Dark background (zinc-900)
-          color: "#ffffff", // White text
-          fontFamily: "42dot Sans",
-          padding: "50px",
+          backgroundColor: "#0f0f0f",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "60px",
           boxSizing: "border-box",
+          fontFamily: "42dot Sans",
         },
         children: [
           {
             type: "div",
             props: {
               style: {
+                backgroundColor: "#18181b",
+                borderRadius: "32px",
+                padding: "60px",
                 width: "100%",
                 height: "100%",
-                backgroundColor: "#1e1e20",
-                borderRadius: "32px",
                 boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-                padding: "60px",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "center",
                 alignItems: "center",
               },
               children: [
-                // Title
                 {
                   type: "div",
                   props: {
@@ -66,34 +57,39 @@ export const GET = async ({ params }) => {
                       color: "#ffffff",
                       textAlign: "center",
                       lineHeight: "1.2",
-                      marginBottom: "24px",
+                      marginBottom: "40px",
+                      whiteSpace: "normal",
+                      wordBreak: "break-word",
+                      overflowWrap: "break-word",
+                      maxWidth: "90%",
                     },
                     children: title,
                   },
                 },
-                // Description
                 {
                   type: "div",
                   props: {
                     style: {
-                      fontSize: "32px",
+                      fontSize: "28px",
                       color: "#a1a1aa",
                       textAlign: "center",
-                      marginBottom: "32px",
                       lineHeight: "1.5",
+                      marginBottom: "40px",
+                      whiteSpace: "normal",
+                      wordBreak: "break-word",
+                      overflowWrap: "break-word",
                       maxWidth: "90%",
                     },
                     children:
-                      content?.slice(0, 100) || "No description available.",
+                      content?.slice(0, 120) ?? "No description available.",
                   },
                 },
-                // Tags
                 {
                   type: "div",
                   props: {
                     style: {
                       display: "flex",
-                      gap: "12px",
+                      gap: "16px",
                       flexWrap: "wrap",
                       justifyContent: "center",
                     },
@@ -104,9 +100,9 @@ export const GET = async ({ params }) => {
                           fontSize: "20px",
                           backgroundColor: "#06b6d4",
                           color: "#fff",
-                          padding: "6px 16px",
+                          padding: "6px 20px",
                           borderRadius: "9999px",
-                          fontWeight: 500,
+                          fontWeight: 600,
                         },
                         children: `#${tag}`,
                       },
@@ -133,17 +129,15 @@ export const GET = async ({ params }) => {
     },
   );
 
-  // Convert the SVG to PNG using Resvg
   const resvg = new Resvg(svg, {
     fitTo: {
       mode: "width",
       value: 1200,
     },
   });
-  const png = resvg.render();
-  const pngBuffer = png.asPng();
 
-  // Return the PNG as a response
+  const pngBuffer = resvg.render().asPng();
+
   return new Response(pngBuffer, {
     headers: {
       "Content-Type": "image/png",
@@ -152,22 +146,16 @@ export const GET = async ({ params }) => {
   });
 };
 
-// Fetch post data from the database
 async function getPostData(slug) {
-  // Fetch the post from the database using Prisma
   const post = await prisma.post.findUnique({
-    where: { id: parseInt(slug) }, // Assuming `id` is an integer
+    where: { id: parseInt(slug) },
     select: {
       title: true,
-      content: true, // Use content for description
-      tags: true, // Tags are stored as JSON string
+      content: true,
+      tags: true,
     },
   });
 
-  if (post) {
-    // Parse the tags from JSON string to array
-    post.tags = JSON.parse(post.tags || "[]");
-  }
-
+  if (post) post.tags = JSON.parse(post.tags || "[]");
   return post;
 }
