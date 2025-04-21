@@ -35,6 +35,20 @@
         : posts;
 </script>
 
+<svelte:head>
+    <title>Junsang.dev}</title>
+    <meta property="og:title" content="junsang.dev" />
+    <meta property="og:description" content="a Personal Blog" />
+    <meta property="og:image" content={`$lib/og_default.png`} />
+    <meta property="og:url" content={`https://junsang.dev/`} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="junsang.dev" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="junsang.dev" />
+    <meta name="twitter:description" content="a Personal Blog" />
+    <meta name="twitter:image" content={`$lib/og_default.png`} />
+</svelte:head>
+
 <div class="flex flex-col h-screen bg-zinc-900">
     <Header title="junsang.dev" />
     <main class="flex-1 overflow-y-auto container mx-auto p-4">

@@ -50,7 +50,6 @@
             property="og:url"
             content={`https://junsang.dev/posts/${post.id}`}
         />
-        <meta property="og:type" content="website" />
         <meta property="og:site_name" content="junsang.dev" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={post.title} />
