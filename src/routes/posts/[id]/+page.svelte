@@ -35,33 +35,17 @@
 
 <svelte:head>
     <title>{post ? post.title : "Loading..."}</title>
-    {#if post}
-        <meta property="og:title" content={post.title} />
-        <meta
-            property="og:description"
-            content={post.description || "Read this amazing post!"}
-        />
-        <meta
-            property="og:image"
-            content={`https://junsang.dev/api/og/${post.id}`}
-        />
-        <meta property="og:type" content="article" />
-        <meta
-            property="og:url"
-            content={`https://junsang.dev/posts/${post.id}`}
-        />
-        <meta property="og:site_name" content="junsang.dev" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={post.title} />
-        <meta
-            name="twitter:description"
-            content={post.description || "Read this amazing post!"}
-        />
-        <meta
-            name="twitter:image"
-            content={`https://junsang.dev/api/og/${post.id}`}
-        />
-    {/if}
+    <title>Junsang.dev}</title>
+    <meta property="og:title" content={post ? post.title : "Junsang.dev"} />
+    <meta property="og:description" content="a Personal Blog" />
+    <meta property="og:image" content={`/images/og_default.png`} />
+    <meta property="og:url" content={`https://junsang.dev/`} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="junsang.dev" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="junsang.dev" />
+    <meta name="twitter:description" content="a Personal Blog" />
+    <meta name="twitter:image" content={`/images/og_default.png`} />
 </svelte:head>
 
 <div class="flex flex-col h-screen bg-zinc-900">
