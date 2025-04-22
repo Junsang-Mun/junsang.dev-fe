@@ -35,7 +35,7 @@
 
 <svelte:head>
     <title>{post ? post.title : "Loading..."}</title>
-    <title>Junsang.dev}</title>
+    <title>Junsang.dev</title>
     <meta property="og:title" content={post ? post.title : "Junsang.dev"} />
     <meta property="og:description" content="a Personal Blog" />
     <meta property="og:image" content={`/images/og_default.png`} />
