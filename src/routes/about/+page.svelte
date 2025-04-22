@@ -86,7 +86,7 @@
 </script>
 
 <svelte:head>
-    <title>Junsang.dev}</title>
+    <title>Junsang.dev</title>
     <meta property="og:title" content="junsang.dev" />
     <meta property="og:description" content="About me" />
     <meta property="og:image" content={`/images/og_default.png`} />
