@@ -31,10 +31,9 @@
     const projects = [
         {
             name: "junsang.dev Personal Blog",
-            description:
-                "Visit https://github.com/Junsang-Mun/blog-public for code",
+            description: "Here, you're seeing my project",
             techStack: "Svelte, Tailwind CSS",
-            link: "https://junsang.dev",
+            link: "https://github.com/Junsang-Mun/blog-public",
         },
     ];
 
