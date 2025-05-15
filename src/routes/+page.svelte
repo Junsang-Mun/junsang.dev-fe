@@ -8,22 +8,31 @@
     let posts = [];
     let selectedTag = null;
     let allTags = [];
+    let loading = true; // Track loading state
 
     onMount(async () => {
-        const res = await fetch("/api/posts");
-        const data = await res.json();
+        try {
+            const res = await fetch("/api/posts");
+            const data = await res.json();
 
-        posts = data.map((post) => ({
-            ...post,
-            tags: post.tags ?? [],
-            summary: post.content?.slice(0, 100) ?? "",
-            date: new Date(post.createdAt).toLocaleDateString(),
-            link: `/posts/${post.id}`,
-        }));
+            posts = data.map((post) => ({
+                ...post,
+                tags: post.tags ?? [],
+                summary: post.content?.slice(0, 100) ?? "",
+                date: new Date(post.createdAt).toLocaleDateString(),
+                link: `/posts/${post.id}`,
+            }));
 
-        const tagSet = new Set();
-        posts.forEach((post) => post.tags.forEach((tag) => tagSet.add(tag)));
-        allTags = Array.from(tagSet).sort();
+            const tagSet = new Set();
+            posts.forEach((post) =>
+                post.tags.forEach((tag) => tagSet.add(tag)),
+            );
+            allTags = Array.from(tagSet).sort();
+        } catch (error) {
+            console.error("Failed to fetch posts:", error);
+        } finally {
+            loading = false; // Set loading to false after fetching
+        }
     });
 
     function filterByTag(tag) {
@@ -63,42 +72,56 @@
             </div>
         </div>
 
-        {#if allTags.length > 0}
-            <div class="mb-4 flex flex-wrap gap-2">
-                {#each allTags as tag}
-                    <button
-                        class="px-3 py-1 rounded-full text-sm border transition
-                {selectedTag === tag
-                            ? 'bg-cyan-600 border-cyan-500 text-white'
-                            : 'bg-zinc-700 border-zinc-600 text-zinc-200'}"
-                        on:click={() => filterByTag(tag)}
+        {#if loading}
+            <!-- Skeleton Loading -->
+            <div class="space-y-4">
+                {#each Array(3) as _, i}
+                    <div
+                        class="bg-zinc-800 p-4 rounded-lg animate-pulse"
+                        key={i}
                     >
-                        {tag}
-                    </button>
+                        <div class="h-6 bg-zinc-700 rounded w-3/4 mb-2"></div>
+                        <div class="h-4 bg-zinc-700 rounded w-1/2 mb-4"></div>
+                        <div class="h-4 bg-zinc-700 rounded w-1/3"></div>
+                    </div>
                 {/each}
             </div>
-        {/if}
-        {#if filteredPosts.length > 0}
-            {#each filteredPosts as post}
-                <Card
-                    {...post}
-                    className="mb-4 hover:ring hover:ring-cyan-500 cursor-pointer"
-                />
-            {/each}
-        {:else if posts.length === 0}
-            <p class="text-lg text-zinc-300">
-                If you're seeing this, it means I haven't written a single word.
-            </p>
         {:else}
-            {#each posts as post}
-                <Card
-                    title={post.title}
-                    summary={post.summary}
-                    date={post.date}
-                    link={post.link}
-                    className="mb-4"
-                />
-            {/each}
+            <!-- Tags Filter -->
+            {#if allTags.length > 0}
+                <div class="mb-4 flex flex-wrap gap-2">
+                    {#each allTags as tag}
+                        <button
+                            class="px-3 py-1 rounded-full text-sm border transition
+                    {selectedTag === tag
+                                ? 'bg-cyan-600 border-cyan-500 text-white'
+                                : 'bg-zinc-700 border-zinc-600 text-zinc-200'}"
+                            on:click={() => filterByTag(tag)}
+                        >
+                            {tag}
+                        </button>
+                    {/each}
+                </div>
+            {/if}
+
+            <!-- Posts -->
+            {#if filteredPosts.length > 0}
+                {#each filteredPosts as post}
+                    <Card
+                        {...post}
+                        className="mb-4 hover:ring hover:ring-cyan-500 cursor-pointer"
+                    />
+                {/each}
+            {:else if posts.length === 0}
+                <p class="text-lg text-zinc-300">
+                    If you're seeing this, it means I haven't written a single
+                    word.
+                </p>
+            {:else}
+                <p class="text-lg text-zinc-300">
+                    No posts match your selected tag.
+                </p>
+            {/if}
         {/if}
     </main>
     <Footer />
