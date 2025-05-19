@@ -24,7 +24,7 @@
 
 @supports (scrollbar-color: auto) {
     * {
-        scrollbar-color: #155e75 transparent;
+        scrollbar-color: whitesmoke transparent;
     }
 }
 
@@ -33,7 +33,7 @@
         background: transparent;
     }
     *::-webkit-scrollbar-thumb {
-        background: #155e75;
+        background: whitesmoke;
     }
 }
 
