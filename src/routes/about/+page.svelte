@@ -13,7 +13,7 @@
                 "Collaborated with product and engineering teams to refine user flows and enhance customer satisfaction.",
                 "Developed communication strategies to improve feedback collection and boost user retention.",
             ],
-            logo: "https://http.cat/404",
+            // logo: "https://http.cat/404",
         },
         {
             role: "Freelance Designer",
