@@ -248,7 +248,7 @@
 
     // Resizable split functionality
     function handleDragStart(event) {
-        // event.preventDefault();
+        event.preventDefault();
         isDragging = true;
         startX = event.clientX;
         document.body.classList.add("select-none");
@@ -273,22 +273,27 @@
         document.body.classList.remove("select-none");
     }
 
-    // Image paste handler
-    // Image paste handler - FIXED VERSION
+    function insertTextAtCursor(text) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        const textNode = document.createTextNode(text);
+        range.insertNode(textNode);
+
+        // Move cursor after inserted text
+        range.setStartAfter(textNode);
+        range.setEndAfter(textNode);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+
     async function handlePaste(event) {
-        event.preventDefault();
+        event.preventDefault(); // Prevent default paste
+
         const items = event.clipboardData?.items;
         if (!items) return;
-
-        let hasImage = false;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf("image") === 0) {
-                hasImage = true;
-                break;
-            }
-        }
-
-        if (!hasImage) return;
 
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
@@ -305,14 +310,13 @@
                     const filename = `pasted-image-${Date.now()}.${fileExtension}`;
 
                     imageStore.set(hash, {
-                        base64: base64,
-                        filename: filename,
-                        size: size,
+                        base64,
+                        filename,
+                        size,
                     });
 
                     saveImageStore();
 
-                    // Insert image at cursor position
                     const selection = window.getSelection();
                     if (selection.rangeCount > 0) {
                         const range = selection.getRangeAt(0);
@@ -328,18 +332,23 @@
                         range.deleteContents();
                         range.insertNode(img);
 
-                        // Move cursor after image
                         range.setStartAfter(img);
                         range.setEndAfter(img);
                         selection.removeAllRanges();
                         selection.addRange(range);
 
-                        // Update the content after inserting the image
                         handleEditableInput();
                     }
                 } catch (error) {
                     console.error("Failed to process image:", error);
                 }
+            } else if (item.type === "text/plain") {
+                // Promisify getAsString
+                const text = await new Promise((resolve) =>
+                    item.getAsString(resolve),
+                );
+                insertTextAtCursor(text);
+                handleEditableInput();
             }
         }
     }
