@@ -17,7 +17,6 @@
 
             if (!tags.includes(newTag) && newTag) {
                 tags = [...tags, newTag];
-                saveToLocalStorage();
             }
 
             tagInput = "";
@@ -26,30 +25,6 @@
 
     function removeTag(tagToRemove) {
         tags = tags.filter((tag) => tag !== tagToRemove);
-        // Immediately save to localStorage when a tag is removed
-        saveToLocalStorage();
-    }
-
-    // Function to save current state to localStorage
-    function saveToLocalStorage() {
-        try {
-            localStorage.setItem(
-                "blog-draft",
-                JSON.stringify({
-                    savedTitle: title,
-                    savedContent: content,
-                    savedTags: tags,
-                    lastSaved: new Date().toISOString(),
-                }),
-            );
-            console.log("Draft saved to localStorage:", {
-                title,
-                tagsCount: tags.length,
-                contentLength: content?.length || 0,
-            });
-        } catch (e) {
-            console.error("Failed to save draft to localStorage:", e);
-        }
     }
 
     // Prepare payload for API with escaped data
@@ -84,7 +59,6 @@
             if (response.ok) {
                 const result = await response.json();
                 alert("Post saved as draft successfully!");
-                localStorage.removeItem("blog-draft");
                 // Use goto for navigation
                 goto("/konsole");
             } else {
@@ -118,7 +92,6 @@
             if (response.ok) {
                 const result = await response.json();
                 alert("Post published successfully!");
-                localStorage.removeItem("blog-draft");
                 // Use goto for navigation
                 goto("/konsole");
             } else {
@@ -130,51 +103,6 @@
             alert("Failed to publish post. Please try again.");
         }
     }
-
-    // Watch for changes to title and content
-    $: if (title) {
-        saveToLocalStorage();
-    }
-
-    $: if (content) {
-        saveToLocalStorage();
-    }
-
-    onMount(() => {
-        // Load saved draft if available
-        try {
-            const savedDraft = localStorage.getItem("blog-draft");
-            if (savedDraft) {
-                console.log("Found saved draft in localStorage");
-                const { savedTitle, savedContent, savedTags, lastSaved } =
-                    JSON.parse(savedDraft);
-
-                title = savedTitle || "";
-                content = savedContent || "";
-                tags = savedTags || [];
-
-                if (lastSaved) {
-                    const saveTime = new Date(lastSaved);
-                    console.log(
-                        `Draft was last saved at: ${saveTime.toLocaleString()}`,
-                    );
-                }
-            }
-        } catch (e) {
-            console.error("Failed to load draft from localStorage:", e);
-        }
-
-        // Set up autosave on an interval as a backup
-        const autosaveInterval = setInterval(() => {
-            saveToLocalStorage();
-        }, 30000); // Save every 30 seconds
-
-        return () => {
-            clearInterval(autosaveInterval);
-            // One final save when component unmounts
-            saveToLocalStorage();
-        };
-    });
 </script>
 
 <div class="flex flex-col h-screen bg-zinc-900 text-zinc-100">
@@ -205,7 +133,6 @@
                 </div>
             </div>
 
-            <!-- Tags section -->
             <div class="mb-6">
                 <div class="flex items-center gap-2 mb-2">
                     <label for="tags" class="text-zinc-400">Tags:</label>
@@ -239,7 +166,6 @@
                 {/if}
             </div>
 
-            <!-- Markdown editor component -->
             <div class="h-[calc(100vh-280px)]">
                 <MarkdownEditor
                     bind:content
