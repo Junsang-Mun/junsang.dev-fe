@@ -248,7 +248,7 @@
 
     // Resizable split functionality
     function handleDragStart(event) {
-        event.preventDefault();
+        // event.preventDefault();
         isDragging = true;
         startX = event.clientX;
         document.body.classList.add("select-none");
