@@ -436,8 +436,8 @@
                 on:paste={handlePaste}
                 on:drop|preventDefault
                 on:dragover|preventDefault
-                class="w-full h-full p-4 bg-zinc-800 text-zinc-100 overflow-auto focus:outline-none prose prose-invert max-w-none"
-                style="white-space: pre-wrap; word-break: break-word; caret-color: #06b6d4;"
+                class="w-full h-full p-4 bg-zinc-800 text-zinc-100 overflow-auto focus:outline-none prose prose-invert max-w-none editor-area"
+                style="white-space: pre-wrap; word-break: break-word; caret-color: #06b6d4; line-height: 1.4;"
                 data-placeholder="Write your markdown here..."
                 aria-label="Markdown editor"
             >
@@ -519,6 +519,46 @@
         padding: 0;
         font-size: inherit; /* Code inside pre should not have smaller font size by default */
         color: inherit;
+    }
+
+    /* Editor-specific line height adjustments */
+    .editor-area {
+        line-height: 1.4 !important;
+    }
+
+    /* Override prose line heights in editor */
+    :global(.editor-area .prose),
+    :global(.editor-area .prose p),
+    :global(.editor-area .prose div) {
+        line-height: 1.4 !important;
+    }
+
+    :global(.editor-area .prose h1) {
+        line-height: 1.2 !important;
+        margin-top: 0.5em !important;
+        margin-bottom: 0.5em !important;
+    }
+
+    :global(.editor-area .prose h2) {
+        line-height: 1.2 !important;
+        margin-top: 0.5em !important;
+        margin-bottom: 0.5em !important;
+    }
+
+    :global(.editor-area .prose h3) {
+        line-height: 1.2 !important;
+        margin-top: 0.5em !important;
+        margin-bottom: 0.5em !important;
+    }
+
+    :global(
+        .editor-area .prose h4,
+        .editor-area .prose h5,
+        .editor-area .prose h6
+    ) {
+        line-height: 1.3 !important;
+        margin-top: 0.5em !important;
+        margin-bottom: 0.5em !important;
     }
 
     /* Placeholder for contenteditable div */
