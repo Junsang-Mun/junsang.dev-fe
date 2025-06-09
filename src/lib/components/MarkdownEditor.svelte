@@ -175,7 +175,7 @@
 
         markdown = processChildren(tempDiv);
         // Clean up: remove leading/trailing whitespace and reduce all newlines to a maximum of one
-        return markdown.replace(/\n{2,}/g, "\n\n").trim();
+        return markdown.replace(/\n{1,}/g, "\n\n").trim();
     }
 
     // Reactive statement: Update editHtml when content prop changes (e.g., loaded from outside)
