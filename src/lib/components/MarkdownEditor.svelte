@@ -174,8 +174,8 @@
         }
 
         markdown = processChildren(tempDiv);
-        // Clean up: remove leading/trailing whitespace and reduce multiple newlines to a maximum of two
-        return markdown.replace(/\n{3,}/g, "\n\n").trim();
+        // Clean up: remove leading/trailing whitespace and reduce all newlines to a maximum of one
+        return markdown.replace(/\n{2,}/g, "\n\n").trim();
     }
 
     // Reactive statement: Update editHtml when content prop changes (e.g., loaded from outside)
@@ -436,7 +436,7 @@
                 on:paste={handlePaste}
                 on:drop|preventDefault
                 on:dragover|preventDefault
-                class="w-full h-full p-4 bg-zinc-800 text-zinc-100 overflow-auto focus:outline-none prose prose-sm prose-invert max-w-none"
+                class="w-full h-full p-4 bg-zinc-800 text-zinc-100 overflow-auto focus:outline-none prose prose-invert max-w-none"
                 style="white-space: pre-wrap; word-break: break-word; caret-color: #06b6d4;"
                 data-placeholder="Write your markdown here..."
                 aria-label="Markdown editor"
