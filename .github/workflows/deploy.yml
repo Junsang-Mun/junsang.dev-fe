@@ -29,7 +29,7 @@ jobs:
             --exclude='prisma/post.db' \
             ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/blog/
 
-      - name: Create .env file
+        - name: Create .env file
         run: |
           echo "VITE_REDIRECT_URI=${{ secrets.ENV_VITE_REDIRECT_URI }}" >> .env
           echo "VITE_GITHUB_CLIENT_SECRET=${{ secrets.ENV_VITE_GITHUB_CLIENT_SECRET }}" >> .env
@@ -55,4 +55,4 @@ jobs:
           podman compose up -d --build
 
           echo '✅ Deployment done with Podman!'
-EOF
+          EOF
