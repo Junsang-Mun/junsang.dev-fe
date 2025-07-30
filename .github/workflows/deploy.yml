@@ -19,7 +19,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Rsync files to VM
         run: |
@@ -29,33 +29,30 @@ jobs:
             --exclude='prisma/post.db' \
             ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/blog/
 
-      - name: Create .env file on VM
+      - name: Create .env file
         run: |
-          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "
-            cat > ~/blog/.env <<EOF
-VITE_REDIRECT_URI=${{ secrets.ENV_VITE_REDIRECT_URI }}
-VITE_GITHUB_CLIENT_SECRET=${{ secrets.ENV_VITE_GITHUB_CLIENT_SECRET }}
-VITE_GITHUB_CLIENT_ID=${{ secrets.ENV_VITE_GITHUB_CLIENT_ID }}
-VITE_ADMIN_EMAIL=${{ secrets.ENV_VITE_ADMIN_EMAIL }}
-EOF
-          "
+          echo "VITE_REDIRECT_URI=${{ secrets.ENV_VITE_REDIRECT_URI }}" >> .env
+          echo "VITE_GITHUB_CLIENT_SECRET=${{ secrets.ENV_VITE_GITHUB_CLIENT_SECRET }}" >> .env
+          echo "VITE_GITHUB_CLIENT_ID=${{ secrets.ENV_VITE_GITHUB_CLIENT_ID }}" >> .env
+          echo "VITE_ADMIN_EMAIL=${{ secrets.ENV_VITE_ADMIN_EMAIL }}" >> .env
 
       - name: Remote: Build & Deploy with Podman Compose
         run: |
-          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "
-            cd ~/blog
-            echo '🧹 Cleaning old containers...'
-            podman-compose stop || true
-            podman-compose rm -f || true
-            podman system prune -f || true
+          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "bash -s" << 'EOF'
+          set -e
+          cd ~/blog
 
-            echo '🔧 Creating SQLite DB if missing...'
-            mkdir -p ~/blog/prisma
-            touch ~/blog/prisma/post.db
-            chmod 644 ~/blog/prisma/post.db
+          echo '🧹 Cleaning old containers...'
+          podman compose down || true
+          podman system prune -f || true
 
-            echo '🐳 Building and starting containers with Podman Compose...'
-            podman-compose up -d --build
+          echo '🔧 Creating SQLite DB if missing...'
+          mkdir -p prisma
+          touch prisma/post.db
+          chmod 644 prisma/post.db
 
-            echo '✅ Deployment done with Podman!'
-          "
+          echo '🐳 Building and starting containers with Podman Compose...'
+          podman compose up -d --build
+
+          echo '✅ Deployment done with Podman!'
+EOF
