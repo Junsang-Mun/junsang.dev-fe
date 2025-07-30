@@ -33,7 +33,7 @@ jobs:
         run: |
           ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "
             cd ~/blog
-            podman compose stop
+            podman-compose stop
             podman system prune -f
-            podman compose up -d --build
+            podman-compose up -d --build
           "
