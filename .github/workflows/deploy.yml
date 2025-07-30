@@ -51,6 +51,9 @@ jobs:
           touch prisma/post.db
           chmod 644 prisma/post.db
 
+          echo '🚀 Running Prisma migrations...'
+          npx prisma migrate deploy
+
           echo '🐳 Building and starting containers with Podman Compose...'
           podman compose up -d --build
 
