@@ -15,12 +15,12 @@ services:
     volumes:
       - ./prisma:/app/prisma
     environment:
-      - NODE_ENV=production
+      NODE_ENV: production
     env_file:
       - .env
 
   caddy:
-    image: caddy:2
+    image: docker.io/caddy:2
     container_name: caddy
     ports:
       - "80:80"

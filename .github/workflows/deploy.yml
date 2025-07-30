@@ -21,6 +21,13 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: Create .env file
+        run: |
+          echo "VITE_REDIRECT_URI=${{ secrets.ENV_VITE_REDIRECT_URI }}" >> .env
+          echo "VITE_GITHUB_CLIENT_SECRET=${{ secrets.ENV_VITE_GITHUB_CLIENT_SECRET }}" >> .env
+          echo "VITE_GITHUB_CLIENT_ID=${{ secrets.ENV_VITE_GITHUB_CLIENT_ID }}" >> .env
+          echo "VITE_ADMIN_EMAIL=${{ secrets.ENV_VITE_ADMIN_EMAIL }}" >> .env
+
       - name: Rsync files to VM
         run: |
           rsync -avz \
@@ -28,13 +35,6 @@ jobs:
             --exclude='node_modules' \
             --exclude='prisma/post.db' \
             ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/blog/
-
-      - name: Create .env file
-        run: |
-          echo "VITE_REDIRECT_URI=${{ secrets.ENV_VITE_REDIRECT_URI }}" >> .env
-          echo "VITE_GITHUB_CLIENT_SECRET=${{ secrets.ENV_VITE_GITHUB_CLIENT_SECRET }}" >> .env
-          echo "VITE_GITHUB_CLIENT_ID=${{ secrets.ENV_VITE_GITHUB_CLIENT_ID }}" >> .env
-          echo "VITE_ADMIN_EMAIL=${{ secrets.ENV_VITE_ADMIN_EMAIL }}" >> .env
 
       - name: Remote Build & Deploy with Podman Compose
         run: |
