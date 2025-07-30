@@ -1,4 +1,4 @@
-name: Deploy to VM (Podman)
+name: Deploy to Oracle
 
 on:
   push:
@@ -13,12 +13,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "22"
-          cache: "npm"
 
       - name: Setup SSH key
         run: |
@@ -35,50 +29,11 @@ jobs:
             --exclude='prisma/post.db' \
             ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/blog/
 
-      - name: Create .env.production file
-        run: |
-          echo "VITE_REDIRECT_URI=${{ secrets.ENV_VITE_REDIRECT_URI }}" >> .env.production
-          echo "VITE_GITHUB_CLIENT_SECRET=${{ secrets.ENV_VITE_GITHUB_CLIENT_SECRET }}" >> .env.production
-          echo "VITE_GITHUB_CLIENT_ID=${{ secrets.ENV_VITE_GITHUB_CLIENT_ID }}" >> .env.production
-          echo "VITE_ADMIN_EMAIL=${{ secrets.ENV_VITE_ADMIN_EMAIL }}" >> .env.production
-
-      - name: Remote: Install Podman & Deploy
+      - name: Run remote commands on VM
         run: |
           ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "
-            set -e
-            if ! command -v podman &> /dev/null; then
-              echo 'Installing Podman...'
-              . /etc/os-release
-              if [ \"$ID\" = \"ubuntu\" ] || [ \"$ID_LIKE\" = *debian* ]; then
-                sudo apt-get update && sudo apt-get install -y podman
-              elif [ \"$ID\" = \"fedora\" ] || [ \"$ID_LIKE\" = *rhel* ]; then
-                sudo dnf install -y podman
-              else
-                echo 'Please install Podman manually.'
-                exit 1
-              fi
-            fi
-            if ! command -v podman-compose &> /dev/null; then
-              echo 'Installing podman-compose...'
-              pip3 install --user podman-compose
-              export PATH=\"$HOME/.local/bin:$PATH\"
-            fi
             cd ~/blog
-
-            echo '🧹 Cleaning old containers...'
-            podman stop blog-app || true
-            podman rm blog-app || true
-            podman stop caddy || true
-            podman rm caddy || true
-
-            echo '🔧 Creating SQLite DB if missing...'
-            mkdir -p ~/blog/prisma
-            touch ~/blog/prisma/post.db
-            chmod 644 ~/blog/prisma/post.db
-
-            echo '🐳 Building images with Podman Compose...'
-            podman-compose down || true
-            podman-compose up -d --build
-
-            echo '✅ Deployment done with Podman!'
+            podman compose stop
+            podman system prune -f
+            podman compose up -d --build
           "
