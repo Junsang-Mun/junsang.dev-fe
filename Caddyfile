@@ -1,3 +1,3 @@
-localhost {
+blog.junsang.dev {
     reverse_proxy sveltekit:3000
 }
