@@ -11,6 +11,11 @@
         server_error: "A server error occurred.",
     };
 
+    console.log(import.meta.env.VITE_GITHUB_CLIENT_ID);
+    console.log(import.meta.env.VITE_GITHUB_CLIENT_SECRET);
+    console.log(import.meta.env.VITE_REDIRECT_URI);
+    console.log('test');
+
     $: error = $page.url.searchParams.get("error");
     $: errorMessage = error ? errorMessages[error] || error : null;
 </script>
