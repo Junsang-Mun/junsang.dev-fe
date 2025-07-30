@@ -1,4 +1,4 @@
-name: Deploy to Oracle
+name: Deploy to VM (Podman)
 
 on:
   push:
@@ -29,11 +29,33 @@ jobs:
             --exclude='prisma/post.db' \
             ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/blog/
 
-      - name: Run remote commands on VM
+      - name: Create .env file on VM
+        run: |
+          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "
+            cat > ~/blog/.env <<EOF
+VITE_REDIRECT_URI=${{ secrets.ENV_VITE_REDIRECT_URI }}
+VITE_GITHUB_CLIENT_SECRET=${{ secrets.ENV_VITE_GITHUB_CLIENT_SECRET }}
+VITE_GITHUB_CLIENT_ID=${{ secrets.ENV_VITE_GITHUB_CLIENT_ID }}
+VITE_ADMIN_EMAIL=${{ secrets.ENV_VITE_ADMIN_EMAIL }}
+EOF
+          "
+
+      - name: Remote: Build & Deploy with Podman Compose
         run: |
           ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "
             cd ~/blog
-            podman-compose stop
-            podman system prune -f
+            echo '🧹 Cleaning old containers...'
+            podman-compose stop || true
+            podman-compose rm -f || true
+            podman system prune -f || true
+
+            echo '🔧 Creating SQLite DB if missing...'
+            mkdir -p ~/blog/prisma
+            touch ~/blog/prisma/post.db
+            chmod 644 ~/blog/prisma/post.db
+
+            echo '🐳 Building and starting containers with Podman Compose...'
             podman-compose up -d --build
+
+            echo '✅ Deployment done with Podman!'
           "
