@@ -1,7 +1,25 @@
 <script>
-    import { onMount, onDestroy } from "svelte";
+    import { onMount, onDestroy, afterUpdate } from "svelte";
     import { marked } from "marked";
     import { browser } from "$app/environment";
+    import hljs from "highlight.js/lib/core"; // Import core
+    import javascript from "highlight.js/lib/languages/javascript"; // Example languages
+    import xml from "highlight.js/lib/languages/xml"; // For HTML
+    import css from "highlight.js/lib/languages/css";
+    import python from "highlight.js/lib/languages/python";
+    import markdown from "highlight.js/lib/languages/markdown";
+    import json from "highlight.js/lib/languages/json";
+    import 'highlight.js/styles/github-dark.css'; // Or your preferred dark theme
+
+    // Register languages you want to support
+    hljs.registerLanguage('javascript', javascript);
+    hljs.registerLanguage('xml', xml); // For html
+    hljs.registerLanguage('css', css);
+    hljs.registerLanguage('python', python);
+    hljs.registerLanguage('markdown', markdown);
+    hljs.registerLanguage('json', json);
+    // Add more languages as needed, e.g., 'java', 'csharp', 'php', 'ruby', 'go', 'rust', 'typescript', 'bash' etc.
+    // import java from 'highlight.js/lib/languages/java'; hljs.registerLanguage('java', java);
 
     // Props
     export let content = "";
@@ -18,10 +36,11 @@
     let editableElement; // Bound to the contenteditable div
     let DOMPurify;
     let isUpdatingFromContent = false; // Flag to prevent update loops
+    let savedRange = null; // To save and restore cursor position
 
     // Generate a short hash for an image (if needed, though not used for storage now)
     function generateImageHash() {
-        const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+        const chars = "abcdefghijklmnopqrstuvwxyz0000000000";
         const timestamp = Date.now().toString(36);
         let hash = "img_" + timestamp;
         for (let i = 0; i < 4; i++) {
@@ -49,17 +68,36 @@
     function markdownToEditHtml(markdown) {
         if (!markdown) return "";
         try {
+            // Use marked to parse markdown to HTML
             let html = marked.parse(markdown);
+
             // Enhance images for editing: make them non-editable themselves but part of editable flow
             html = html.replace(
                 /<img([^>]*?)src="(data:image\/[^"]+)"([^>]*?)>/g,
                 (match, before, src, after) => {
                     const altMatch = match.match(/alt="([^"]*)"/);
                     const alt = altMatch ? altMatch[1] : "";
-                    // Apply specific styles for images within the editor
-                    return `<img${before}src="${src}"${after} contenteditable="false" data-base64="${src}" data-alt="${alt}" style="max-width: 200px; height: auto; margin: 10px 0; border: 2px solid #4a5568; border-radius: 8px; cursor: pointer;">`;
+                    const filenameMatch = match.match(/data-filename="([^"]*)"/);
+                    const filename = filenameMatch ? filenameMatch[1] : "";
+
+                    return `<img${before}src="${src}"${after} contenteditable="false" data-base64="${src}" data-alt="${alt}" data-filename="${filename}" style="max-width: 200px; height: auto; margin: 10px 0; border: 2px solid #4a5568; border-radius: 8px; cursor: pointer;">`;
                 },
             );
+
+            // Enhance code blocks for editing: ensure language classes are present
+            // This relies on marked producing <pre><code> elements.
+            html = html.replace(
+                /<pre><code([^>]*)class="language-(\S+)"([^>]*)>([\s\S]*?)<\/code><\/pre>/g,
+                (match, beforeClass, lang, afterClass, codeContent) => {
+                    // Ensure the language class is correctly applied and HTML entities are handled
+                    const escapedCode = codeContent
+                        .replace(/&amp;/g, "&")
+                        .replace(/&lt;/g, "<")
+                        .replace(/&gt;/g, ">");
+                    return `<pre><code${beforeClass}class="language-${lang}"${afterClass}>${escapedCode}</code></pre>`;
+                },
+            );
+
             return html;
         } catch (error) {
             console.error("Error parsing markdown for editing:", error);
@@ -112,7 +150,6 @@
                         }
                         return `\`${processChildren(node)}\``;
                     case "pre":
-                        // Assuming pre contains one code block
                         const codeBlock = node.querySelector("code");
                         const langMatch =
                             codeBlock &&
@@ -142,9 +179,13 @@
                         return processChildren(node); // Should not happen for valid HTML
                     case "a":
                         const href = node.getAttribute("href") || "";
-                        return `[${processChildren(node)}](${href})`;
+                        const text = processChildren(node);
+                        // Check if it's a file link (base64 data URL with filename)
+                        if (href.startsWith("data:") && node.hasAttribute("data-filename")) {
+                            return `[${node.getAttribute("data-filename")}](${href})`;
+                        }
+                        return `[${text}](${href})`;
                     case "img":
-                        // Ensure data-base64 is prioritized as it's the source for pasted images
                         const src =
                             node.getAttribute("data-base64") ||
                             node.getAttribute("src") ||
@@ -153,7 +194,9 @@
                             node.getAttribute("data-alt") ||
                             node.getAttribute("alt") ||
                             "";
-                        return `![${alt}](${src})`;
+                        // Use data-filename if available, otherwise fallback to alt
+                        const filename = node.getAttribute("data-filename") || alt;
+                        return `![${filename}](${src})`; // Use filename for the alt text in markdown
                     case "br":
                         return "\n";
                     case "hr":
@@ -175,38 +218,69 @@
 
         markdown = processChildren(tempDiv);
         // Clean up: remove leading/trailing whitespace and reduce all newlines to a maximum of one
-        return markdown.replace(/\n{1,}/g, "\n\n").trim();
+        return markdown.replace(/\n{2,}/g, "\n\n").trim(); // Allow maximum of two newlines
+    }
+
+    // Save current cursor position
+    function saveSelection() {
+        if (browser && editableElement) {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                savedRange = selection.getRangeAt(0).cloneRange();
+            } else {
+                savedRange = null;
+            }
+        }
+    }
+
+    // Restore saved cursor position
+    function restoreSelection() {
+        if (browser && savedRange && editableElement) {
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(savedRange);
+            // Ensure the restored selection is within the editable element
+            if (!editableElement.contains(savedRange.startContainer) || !editableElement.contains(savedRange.endContainer)) {
+                // If not, clear the selection or move to end
+                selection.removeAllRanges();
+                const range = document.createRange();
+                range.selectNodeContents(editableElement);
+                range.collapse(false); // Move cursor to the end
+                selection.addRange(range);
+            }
+            savedRange = null; // Clear after use
+        }
     }
 
     // Reactive statement: Update editHtml when content prop changes (e.g., loaded from outside)
     // This should only run if the change isn't coming from the editor itself
-    $: if (!isUpdatingFromContent && editableElement) {
-        // Check if the editor's innerHTML is already in sync with the new content
-        // This is an optimization to prevent cursor jumps if markdownToEditHtml(content)
-        // results in the same HTML as what's already in the editor.
-        const currentEditorMarkdown = htmlToMarkdown(editableElement.innerHTML);
-        if (currentEditorMarkdown !== content) {
+    $: {
+        if (!isUpdatingFromContent && editableElement) {
+            saveSelection(); // Save before update
+            const currentEditorMarkdown = htmlToMarkdown(editableElement.innerHTML);
+            if (currentEditorMarkdown !== content) {
+                editHtml = markdownToEditHtml(content);
+            }
+        } else if (!editableElement && content) {
+            // Initial load before editableElement is bound
             editHtml = markdownToEditHtml(content);
-            // Svelte will update the {@html editHtml} binding.
-            // We might need to restore selection/cursor position if this causes issues.
         }
-    } else if (!editableElement && content) {
-        // Initial load before editableElement is bound
-        editHtml = markdownToEditHtml(content);
     }
 
     // Reactive statement: Update previewHtml whenever content changes
     $: {
         try {
             if (browser && DOMPurify) {
-                previewHtml = DOMPurify.sanitize(
-                    marked.parse(
-                        content || "<!-- Type something to see the preview -->",
-                    ),
+                const parsedHtml = marked.parse(
+                    content || "",
                 );
+                previewHtml = DOMPurify.sanitize(parsedHtml);
+
+                // Apply syntax highlighting after DOMPurify.sanitize
+                // Use afterUpdate for this, as the elements need to be in the DOM
             } else {
                 previewHtml = marked.parse(
-                    content || "<!-- Type something to see the preview -->",
+                    content || "",
                 );
             }
         } catch (error) {
@@ -215,9 +289,26 @@
         }
     }
 
+    // After Svelte has updated the DOM, apply highlight.js
+    afterUpdate(() => {
+        if (browser) {
+            // Only highlight code blocks within the preview area
+            const previewElement = document.querySelector('.preview-area');
+            if (previewElement) {
+                previewElement.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
+            }
+        }
+    });
+
+
     // Handle input in the contenteditable div (typing, deleting, etc.)
     function handleEditableInput() {
         if (!editableElement) return;
+
+        // Save selection *before* updating content, as content update re-renders HTML
+        saveSelection();
 
         // Set flag to indicate the 'content' prop is being updated from the editor itself
         isUpdatingFromContent = true;
@@ -232,6 +323,7 @@
         // Use a microtask to ensure it happens after the current sync updates.
         Promise.resolve().then(() => {
             isUpdatingFromContent = false;
+            restoreSelection(); // Restore selection after Svelte updates are complete
         });
     }
 
@@ -306,8 +398,6 @@
 
                 try {
                     const base64 = await blobToBase64(blob);
-                    // const hash = generateImageHash(); // Not strictly needed if not storing separately
-                    // const size = getBase64Size(base64);
                     const fileExtension = blob.type.split("/")[1] || "png";
                     const filename = `pasted-image-${Date.now()}.${fileExtension}`;
 
@@ -321,6 +411,7 @@
                         img.alt = filename;
                         img.setAttribute("data-base64", base64); // Store base64 for markdown conversion
                         img.setAttribute("data-alt", filename);
+                        img.setAttribute("data-filename", filename); // Store original filename
                         img.contentEditable = "false"; // Make the image itself not directly editable
                         img.style.cssText =
                             "max-width: 200px; height: auto; margin: 10px 0; border: 2px solid #4a5568; border-radius: 8px; cursor: pointer;";
@@ -349,12 +440,88 @@
             // Add handling for other types like text/html if desired
         }
 
-        // The 'input' event on editableElement will fire due to DOM changes,
-        // which will call handleEditableInput(). So, no explicit call here.
-        // if (pastedContentHandled) {
-        // handleEditableInput(); // THIS LINE IS REMOVED
-        // }
+        if (pastedContentHandled) {
+            handleEditableInput(); // Manually trigger input to update content and preview
+        }
     }
+
+    // Handle drag and drop files
+    async function handleDrop(event) {
+        event.preventDefault(); // Prevent default browser file handling
+        event.stopPropagation(); // Stop event from bubbling up
+
+        if (!editableElement) return;
+
+        const files = event.dataTransfer?.files;
+        if (!files || files.length === 0) return;
+
+        let filesHandled = false;
+        const selection = window.getSelection();
+        const originalRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const filename = file.name;
+
+            try {
+                const base64 = await blobToBase64(file);
+                const isImage = file.type.startsWith("image/");
+
+                if (originalRange) {
+                    selection.removeAllRanges(); // Clear existing selection before inserting
+                    selection.addRange(originalRange); // Restore to insert at drop point
+                } else {
+                    // If no existing selection, try to put at end of content
+                    const range = document.createRange();
+                    range.selectNodeContents(editableElement);
+                    range.collapse(false); // Move cursor to the end
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+
+
+                if (isImage) {
+                    const img = document.createElement("img");
+                    img.src = base64;
+                    img.alt = filename;
+                    img.setAttribute("data-base64", base64);
+                    img.setAttribute("data-alt", filename);
+                    img.setAttribute("data-filename", filename); // Store original filename
+                    img.contentEditable = "false";
+                    img.style.cssText = "max-width: 200px; height: auto; margin: 10px 0; border: 2px solid #4a5568; border-radius: 8px; cursor: pointer;";
+                    insertNodeAtCursor(img);
+                } else {
+                    // For non-image files, insert a markdown link with data URL
+                    const linkText = `[${filename}](${base64})`;
+                    insertTextAtCursor(linkText);
+                }
+                filesHandled = true;
+            } catch (error) {
+                console.error(`Failed to process dropped file ${filename}:`, error);
+                insertTextAtCursor(`[Error processing ${filename}]`); // Inform user
+            }
+        }
+
+        if (filesHandled) {
+            handleEditableInput(); // Trigger content update
+        }
+    }
+
+    function insertNodeAtCursor(node) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        range.deleteContents(); // Delete selected content if any
+        range.insertNode(node);
+
+        // Move cursor after inserted node
+        range.setStartAfter(node);
+        range.setEndAfter(node);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+
 
     // Convert blob to base64
     function blobToBase64(blob) {
@@ -415,16 +582,12 @@
     });
 </script>
 
-<!-- svelte:window is not used for mousemove/mouseup here; added to onMount/onDestroy for clarity -->
-<!-- bind:innerWidth={containerWidth} is still useful -->
 <svelte:window bind:innerWidth={containerWidth} />
 
 <div class="w-full flex flex-col bg-zinc-900 text-zinc-100">
-    <!-- Editor and Preview Panes -->
     <div
         class={`flex ${height} border border-zinc-700 rounded-lg overflow-hidden shadow-lg`}
     >
-        <!-- Editable Markdown Area -->
         <div
             class="h-full overflow-hidden relative"
             style="width: {splitPosition}%;"
@@ -434,7 +597,7 @@
                 contenteditable="true"
                 on:input={handleEditableInput}
                 on:paste={handlePaste}
-                on:drop|preventDefault
+                on:drop={handleDrop}
                 on:dragover|preventDefault
                 class="w-full h-full p-4 bg-zinc-800 text-zinc-100 overflow-auto focus:outline-none prose prose-invert max-w-none editor-area"
                 style="white-space: pre-wrap; word-break: break-word; caret-color: #06b6d4; line-height: 1.4;"
@@ -445,7 +608,6 @@
             </div>
         </div>
 
-        <!-- Resizer Handle -->
         <button
             type="button"
             class="w-2 h-full bg-zinc-700 hover:bg-blue-600 focus:bg-blue-500 transition-colors duration-150 cursor-col-resize flex items-center justify-center group focus:outline-none"
@@ -469,9 +631,8 @@
             ></div>
         </button>
 
-        <!-- Preview Area -->
         <div
-            class="h-full overflow-auto bg-zinc-800"
+            class="h-full overflow-auto bg-zinc-800 preview-area"
             style="width: calc(100% - {splitPosition}% - 0.5rem); margin-left: 0.5rem;"
             aria-live="polite"
         >
@@ -490,6 +651,10 @@
 </div>
 
 <style>
+    /* Import highlight.js theme */
+    @import 'highlight.js/styles/github-dark.css'; /* Choose a dark theme that matches your zinc-900 background */
+
+
     :global(.prose) {
         color: inherit; /* Or specific color for prose content */
     }
@@ -514,10 +679,11 @@
         border-radius: 6px;
         overflow-x: auto;
     }
+    /* Highlight.js will add its own classes to pre code blocks */
     :global(.prose pre code) {
         background-color: transparent;
         padding: 0;
-        font-size: inherit; /* Code inside pre should not have smaller font size by default */
+        font-size: inherit;
         color: inherit;
     }
 
@@ -598,6 +764,4 @@
         transform: scale(1.01); /* Slight zoom on hover */
     }
 
-    /* Remove default prose margins for better control if needed, or adjust in Tailwind config */
-    /* Example: :global(.prose > :first-child) { margin-top: 0; } */
 </style>
