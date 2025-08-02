@@ -6,12 +6,16 @@
     function toggleMenu() {
         isMenuOpen = !isMenuOpen;
     }
+
+    function onClickLogo() {
+        window.location.href = "/";
+    }
 </script>
 
 <header class="bg-zinc-950 text-zinc-100 p-4">
     <div class="container mx-auto flex justify-between items-center">
         <!-- Logo or Title -->
-        <h1 class="text-2xl font-bold">{title}</h1>
+        <h1 class="text-2xl font-bold" on:click={onClickLogo} on:mouseenter={() => (document.body.style.cursor = "pointer")} on:mouseleave={() => (document.body.style.cursor = "default")}>{title}</h1>
 
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex space-x-4">
