@@ -50,7 +50,7 @@
             program: "Software Engineering",
             degree: "Member",
             dates: "2023 - Present",
-            description: "Project-based learning at 42 Seoul.",
+            description: ["Highly selective, tuition-free software engineering program with a peer-to-peer, project-based learning model.", "Part of the global 42 Network originating from France, focused on autonomous problem-solving, collaboration, and real-world development skills."]
         },
     ];
 
@@ -199,7 +199,7 @@
                     <p class="text-zinc-100">
                         {edu.program} | {edu.degree} | {edu.dates}
                     </p>
-                    <p class="text-zinc-100">{edu.description}</p>
+                    <p class="text-zinc-100">{#each edu.description as desc}<span>{desc}</span><br>{/each}</p>
                 </div>
             {/each}
         </section>
