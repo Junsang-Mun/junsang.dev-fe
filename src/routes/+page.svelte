@@ -4,6 +4,7 @@
     import Footer from "$lib/components/Footer.svelte";
     import Card from "$lib/components/Card.svelte";
     import SearchBar from "$lib/components/SearchBar.svelte";
+    import YoutubePlayer from "$lib/components/YoutubePlayer.svelte";
 
     let posts = [];
     let selectedTag = null;
