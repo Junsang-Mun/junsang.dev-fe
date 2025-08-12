@@ -23,11 +23,13 @@
 	export let content = '';
 	export let title = '';
 	export let height = 'h-[calc(100vh-220px)]';
+	// mode: 'split' (default shows editor + preview), 'edit' (editor only), 'preview' (preview only)
+	export let mode = 'split';
 
 	// --- STATE ---
 	let previewHtml = '';
 	let isDragging = false;
-	let splitPosition = 50;
+	let splitPosition = 50; // percentage width of editor in split mode
 	let containerWidth;
 	let startX;
 	let textareaElement; // Reference to the textarea element
@@ -36,13 +38,12 @@
 	// --- REACTIVE UPDATES ---
 
 	// Reactive statement: Update previewHtml whenever content changes. This is now the core logic.
-	$: {
+	$: if (mode !== 'edit') { // Only build preview when needed
 		try {
 			if (browser && DOMPurify) {
 				const parsedHtml = marked.parse(content || '');
 				previewHtml = DOMPurify.sanitize(parsedHtml);
 			} else {
-				// Fallback for SSR or if DOMPurify fails to load
 				previewHtml = marked.parse(content || '');
 			}
 		} catch (error) {
@@ -53,6 +54,7 @@
 
 	// After Svelte has updated the DOM, apply syntax highlighting.
 	afterUpdate(() => {
+		if (mode === 'edit') return; // no preview to highlight
 		const previewElement = document.querySelector('.preview-area');
 		if (previewElement) {
 			previewElement.querySelectorAll('pre code').forEach((block) => {
@@ -65,6 +67,7 @@
 
 	// Resizable split functionality
 	function handleDragStart(event) {
+		if (mode !== 'split') return; // dragging only in split mode
 		event.preventDefault();
 		isDragging = true;
 		startX = event.clientX;
@@ -73,6 +76,7 @@
 	}
 
 	function handleDrag(event) {
+		if (mode !== 'split') return;
 		if (!isDragging || !containerWidth) return;
 		const dx = event.clientX - startX;
 		const currentEditorWidthPx = (splitPosition / 100) * containerWidth;
@@ -187,52 +191,58 @@
 
 <div class="w-full flex flex-col bg-zinc-900 text-zinc-100">
 	<div class={`flex ${height} border border-zinc-700 rounded-lg overflow-hidden shadow-lg`}>
-		<div class="h-full overflow-hidden relative" style="width: {splitPosition}%;">
-			<textarea
-				bind:this={textareaElement}
-				bind:value={content}
-				on:paste={handlePaste}
-				on:drop={handleDrop}
-				on:dragover|preventDefault
-				class="w-full h-full p-4 bg-zinc-800 text-zinc-100 resize-none focus:outline-none editor-area"
-				style="line-height: 1.5; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;"
-				placeholder="Write your markdown here..."
-				aria-label="Markdown editor"
-			></textarea>
-		</div>
+		{#if mode !== 'preview'}
+			<div class="h-full overflow-hidden relative" style="width: {mode === 'split' ? splitPosition + '%' : '100%'};">
+				<textarea
+					bind:this={textareaElement}
+					bind:value={content}
+					on:paste={handlePaste}
+					on:drop={handleDrop}
+					on:dragover|preventDefault
+					class="w-full h-full p-4 bg-zinc-800 text-zinc-100 resize-none focus:outline-none editor-area"
+					style="line-height: 1.5; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;"
+					placeholder="Write your markdown here..."
+					aria-label="Markdown editor"
+				></textarea>
+			</div>
+		{/if}
 
-		<button
-			type="button"
-			class="w-2 h-full bg-zinc-700 hover:bg-blue-600 focus:bg-blue-500 transition-colors duration-150 cursor-col-resize flex items-center justify-center group focus:outline-none"
-			on:mousedown={handleDragStart}
-			on:keydown={(e) => {
-				if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
-					e.preventDefault();
-					const delta = e.key === 'ArrowLeft' ? -1 : 1;
-					const newPosition = Math.max(20, Math.min(80, splitPosition + delta * 2));
-					splitPosition = newPosition;
-				}
-			}}
-			aria-label="Resize editor panels"
-			title="Drag to resize or use arrow keys"
-		>
-			<div class="w-0.5 h-8 bg-zinc-500 group-hover:bg-blue-300 rounded-full"></div>
-		</button>
+		{#if mode === 'split'}
+			<button
+				type="button"
+				class="w-2 h-full bg-zinc-700 hover:bg-blue-600 focus:bg-blue-500 transition-colors duration-150 cursor-col-resize flex items-center justify-center group focus:outline-none"
+				on:mousedown={handleDragStart}
+				on:keydown={(e) => {
+					if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
+						e.preventDefault();
+						const delta = e.key === 'ArrowLeft' ? -1 : 1;
+						const newPosition = Math.max(20, Math.min(80, splitPosition + delta * 2));
+						splitPosition = newPosition;
+					}
+				}}
+				aria-label="Resize editor panels"
+				title="Drag to resize or use arrow keys"
+			>
+				<div class="w-0.5 h-8 bg-zinc-500 group-hover:bg-blue-300 rounded-full"></div>
+			</button>
+		{/if}
 
-		<div
-			class="h-full overflow-auto bg-zinc-800 preview-area"
-			style="width: calc(100% - {splitPosition}% - 0.5rem); margin-left: 0.5rem;"
-			aria-live="polite"
-		>
-			<div class="p-4">
-				<h2 class="text-2xl font-semibold pb-2 mb-4 border-b border-zinc-700 text-zinc-200">
-					{title || 'Untitled Post'}
-				</h2>
-				<div class="prose prose-invert max-w-none">
-					{@html previewHtml}
+		{#if mode !== 'edit'}
+			<div
+				class="h-full overflow-auto bg-zinc-800 preview-area"
+				style="width: {mode === 'split' ? `calc(100% - ${splitPosition}% - 0.5rem)` : '100%'}; margin-left: {mode === 'split' ? '0.5rem' : '0'};"
+				aria-live="polite"
+			>
+				<div class="p-4">
+					<h2 class="text-2xl font-semibold pb-2 mb-4 border-b border-zinc-700 text-zinc-200">
+						{title || 'Untitled Post'}
+					</h2>
+					<div class="prose prose-invert max-w-none">
+						{@html previewHtml}
+					</div>
 				</div>
 			</div>
-		</div>
+		{/if}
 	</div>
 </div>
 

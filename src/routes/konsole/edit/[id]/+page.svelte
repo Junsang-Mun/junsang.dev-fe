@@ -209,6 +209,7 @@
                         bind:content
                         {title}
                         height="h-[calc(100vh-280px)]"
+                        mode="split"
                     />
                 </div>
             </div>
