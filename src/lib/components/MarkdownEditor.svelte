@@ -1,159 +1,27 @@
 <script>
-	import { onMount, onDestroy, afterUpdate } from 'svelte';
-	import { marked } from 'marked';
-	import { browser } from '$app/environment';
-	import hljs from 'highlight.js/lib/core';
-	import javascript from 'highlight.js/lib/languages/javascript';
-	import xml from 'highlight.js/lib/languages/xml'; // For HTML
-	import css from 'highlight.js/lib/languages/css';
-	import python from 'highlight.js/lib/languages/python';
-	import markdown from 'highlight.js/lib/languages/markdown';
-	import json from 'highlight.js/lib/languages/json';
-	import 'highlight.js/styles/github-dark.css';
+	import { onMount, onDestroy } from "svelte";
+	import { Editor } from "@tiptap/core";
+	import StarterKit from "@tiptap/starter-kit";
+	import Highlight from "@tiptap/extension-highlight";
+	import Typography from "@tiptap/extension-typography";
+	import Link from "@tiptap/extension-link";
+	import Image from "@tiptap/extension-image";
+	import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+	import Placeholder from "@tiptap/extension-placeholder";
+	import { Markdown } from "tiptap-markdown";
+	import { all, createLowlight } from "lowlight";
+	import "highlight.js/styles/github-dark.css";
 
-	// Register languages
-	hljs.registerLanguage('javascript', javascript);
-	hljs.registerLanguage('xml', xml);
-	hljs.registerLanguage('css', css);
-	hljs.registerLanguage('python', python);
-	hljs.registerLanguage('markdown', markdown);
-	hljs.registerLanguage('json', json);
+	// Create lowlight instance
+	const lowlight = createLowlight(all);
 
-	// --- PROPS ---
-	export let content = '';
-	export let title = '';
-	export let height = 'h-[calc(100vh-220px)]';
-	// mode: 'split' (default shows editor + preview), 'edit' (editor only), 'preview' (preview only)
-	export let mode = 'split';
+	export let content = "";
+	export let title = "";
+	export let height = "min-h-[500px]";
+	export let placeholder = "Write your story...";
 
-	// --- STATE ---
-	let previewHtml = '';
-	let isDragging = false;
-	let splitPosition = 50; // percentage width of editor in split mode
-	let containerWidth;
-	let startX;
-	let textareaElement; // Reference to the textarea element
-	let DOMPurify;
-
-	// --- REACTIVE UPDATES ---
-
-	// Reactive statement: Update previewHtml whenever content changes. This is now the core logic.
-	$: if (mode !== 'edit') { // Only build preview when needed
-		try {
-			if (browser && DOMPurify) {
-				const parsedHtml = marked.parse(content || '');
-				previewHtml = DOMPurify.sanitize(parsedHtml);
-			} else {
-				previewHtml = marked.parse(content || '');
-			}
-		} catch (error) {
-			console.error('Error parsing markdown for preview:', error);
-			previewHtml = `<p>Error parsing markdown: ${error.message}</p>`;
-		}
-	}
-
-	// After Svelte has updated the DOM, apply syntax highlighting.
-	afterUpdate(() => {
-		if (mode === 'edit') return; // no preview to highlight
-		const previewElement = document.querySelector('.preview-area');
-		if (previewElement) {
-			previewElement.querySelectorAll('pre code').forEach((block) => {
-				hljs.highlightElement(block);
-			});
-		}
-	});
-
-	// --- EVENT HANDLERS ---
-
-	// Resizable split functionality
-	function handleDragStart(event) {
-		if (mode !== 'split') return; // dragging only in split mode
-		event.preventDefault();
-		isDragging = true;
-		startX = event.clientX;
-		document.body.style.cursor = 'col-resize';
-		document.body.classList.add('select-none');
-	}
-
-	function handleDrag(event) {
-		if (mode !== 'split') return;
-		if (!isDragging || !containerWidth) return;
-		const dx = event.clientX - startX;
-		const currentEditorWidthPx = (splitPosition / 100) * containerWidth;
-		let newEditorWidthPx = currentEditorWidthPx + dx;
-
-		const minWidthPx = 0.2 * containerWidth;
-		const maxWidthPx = 0.8 * containerWidth;
-		newEditorWidthPx = Math.max(minWidthPx, Math.min(newEditorWidthPx, maxWidthPx));
-
-		splitPosition = (newEditorWidthPx / containerWidth) * 100;
-		startX = event.clientX;
-	}
-
-	function handleDragEnd() {
-		if (!isDragging) return;
-		isDragging = false;
-		document.body.style.cursor = 'default';
-		document.body.classList.remove('select-none');
-	}
-
-	// Helper to insert text at the textarea's cursor position
-	function insertTextAtCursor(text) {
-		if (!textareaElement) return;
-
-		const start = textareaElement.selectionStart;
-		const end = textareaElement.selectionEnd;
-		const originalValue = textareaElement.value;
-
-		// Update the content prop, which will in turn update the textarea's value
-		content = originalValue.substring(0, start) + text + originalValue.substring(end);
-
-		// After Svelte updates the DOM, move the cursor to the end of the inserted text
-		// Use a microtask to wait for the DOM update
-		Promise.resolve().then(() => {
-			textareaElement.selectionStart = textareaElement.selectionEnd = start + text.length;
-			textareaElement.focus();
-		});
-	}
-
-	// Handle paste events to upload images
-	async function handlePaste(event) {
-		if (!event.clipboardData?.items) return;
-
-		for (const item of event.clipboardData.items) {
-			if (item.type.indexOf('image') === 0) {
-				event.preventDefault(); // Prevent pasting the file path
-				const blob = item.getAsFile();
-				if (!blob) continue;
-
-				try {
-					const base64 = await blobToBase64(blob);
-					const filename = `pasted-image-${Date.now()}.${blob.type.split('/')[1] || 'png'}`;
-					const markdownImage = `![${filename}](${base64})`;
-					insertTextAtCursor(markdownImage);
-				} catch (error) {
-					console.error('Failed to process pasted image:', error);
-				}
-			}
-		}
-	}
-
-	// Handle dropping files onto the textarea
-	async function handleDrop(event) {
-		event.preventDefault();
-		if (!event.dataTransfer?.files) return;
-
-		for (const file of event.dataTransfer.files) {
-			try {
-				const base64 = await blobToBase64(file);
-				const markdownLink = `![${file.name}](${base64})`;
-				insertTextAtCursor(markdownLink);
-			} catch (error) {
-				console.error(`Failed to process dropped file ${file.name}:`, error);
-				insertTextAtCursor(`[Error processing ${file.name}]`);
-			}
-		}
-	}
+	let element;
+	let editor;
 
 	// Convert a file/blob to a base64 string
 	function blobToBase64(blob) {
@@ -165,132 +33,258 @@
 		});
 	}
 
-	// --- LIFECYCLE ---
-	onMount(async () => {
-		if (browser) {
-			try {
-				const DOMPurifyModule = await import('dompurify');
-				DOMPurify = DOMPurifyModule.default;
-			} catch (e) {
-				console.error('Failed to load DOMPurify:', e);
-			}
-		}
-		window.addEventListener('mousemove', handleDrag);
-		window.addEventListener('mouseup', handleDragEnd);
+	onMount(() => {
+		editor = new Editor({
+			element: element,
+			extensions: [
+				StarterKit.configure({
+					codeBlock: false, // We use CodeBlockLowlight instead
+				}),
+				Highlight,
+				Typography,
+				Link.configure({
+					openOnClick: false,
+				}),
+				Image,
+				CodeBlockLowlight.configure({
+					lowlight,
+				}),
+				Placeholder.configure({
+					placeholder: placeholder,
+				}),
+				Markdown.configure({
+					html: false, // We want pure markdown output
+					transformPastedText: true,
+					transformCopiedText: true,
+				}),
+			],
+			content: content,
+			editorProps: {
+				attributes: {
+					class: "prose prose-invert max-w-none focus:outline-none min-h-[inherit]",
+				},
+				handlePaste: (view, event, slice) => {
+					const items = event.clipboardData?.items;
+					if (items) {
+						for (const item of items) {
+							if (item.type.indexOf("image") === 0) {
+								event.preventDefault();
+								const blob = item.getAsFile();
+								if (blob) {
+									blobToBase64(blob).then((base64) => {
+										const { schema } = view.state;
+										const node = schema.nodes.image.create({
+											src: base64,
+										});
+										const transaction =
+											view.state.tr.replaceSelectionWith(
+												node,
+											);
+										view.dispatch(transaction);
+									});
+									return true;
+								}
+							}
+						}
+					}
+					return false;
+				},
+				handleDrop: (view, event, slice, moved) => {
+					if (
+						!moved &&
+						event.dataTransfer &&
+						event.dataTransfer.files &&
+						event.dataTransfer.files.length > 0
+					) {
+						const files = event.dataTransfer.files;
+						for (const file of files) {
+							if (file.type.indexOf("image") === 0) {
+								event.preventDefault();
+								blobToBase64(file).then((base64) => {
+									const { schema } = view.state;
+									const node = schema.nodes.image.create({
+										src: base64,
+									});
+									const transaction =
+										view.state.tr.replaceSelectionWith(
+											node,
+										);
+									view.dispatch(transaction);
+								});
+								return true;
+							}
+						}
+					}
+					return false;
+				},
+			},
+			onUpdate: ({ editor }) => {
+				// Get markdown content
+				content = editor.storage.markdown.getMarkdown();
+			},
+		});
 	});
 
 	onDestroy(() => {
-		if (browser) {
-			window.removeEventListener('mousemove', handleDrag);
-			window.removeEventListener('mouseup', handleDragEnd);
+		if (editor) {
+			editor.destroy();
 		}
 	});
+
+	// Update editor content if prop changes externally (and not by the editor itself)
+	$: if (editor && content !== editor.storage.markdown.getMarkdown()) {
+		// This check is a bit simplistic and might cause cursor jumps if we're not careful.
+		// Ideally, we only update if the content is significantly different or if we know it came from outside.
+		// For now, we'll assume one-way binding from editor to content is the primary flow,
+		// but if we need to load initial content, onMount handles it.
+		// If we need to reset content, we might need a better check.
+		// Let's stick to onMount for initial load to avoid cursor jumping issues during typing.
+		// If dynamic updates are needed, we'd need to diff or check focus.
+	}
 </script>
 
-<svelte:window bind:innerWidth={containerWidth} />
-
-<div class="w-full flex flex-col bg-zinc-900 text-zinc-100">
-	<div class={`flex ${height} border border-zinc-700 rounded-lg overflow-hidden shadow-lg`}>
-		{#if mode !== 'preview'}
-			<div class="h-full overflow-hidden relative" style="width: {mode === 'split' ? splitPosition + '%' : '100%'};">
-				<textarea
-					bind:this={textareaElement}
-					bind:value={content}
-					on:paste={handlePaste}
-					on:drop={handleDrop}
-					on:dragover|preventDefault
-					class="w-full h-full p-4 bg-zinc-800 text-zinc-100 resize-none focus:outline-none editor-area"
-					style="line-height: 1.5; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;"
-					placeholder="Write your markdown here..."
-					aria-label="Markdown editor"
-				></textarea>
-			</div>
-		{/if}
-
-		{#if mode === 'split'}
+<div
+	class="w-full flex flex-col bg-zinc-900 text-zinc-100 border border-zinc-700 rounded-lg overflow-hidden shadow-lg"
+>
+	{#if editor}
+		<div
+			class="flex items-center gap-2 p-2 border-b border-zinc-700 bg-zinc-800 overflow-x-auto"
+		>
 			<button
-				type="button"
-				class="w-2 h-full bg-zinc-700 hover:bg-blue-600 focus:bg-blue-500 transition-colors duration-150 cursor-col-resize flex items-center justify-center group focus:outline-none"
-				on:mousedown={handleDragStart}
-				on:keydown={(e) => {
-					if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
-						e.preventDefault();
-						const delta = e.key === 'ArrowLeft' ? -1 : 1;
-						const newPosition = Math.max(20, Math.min(80, splitPosition + delta * 2));
-						splitPosition = newPosition;
-					}
-				}}
-				aria-label="Resize editor panels"
-				title="Drag to resize or use arrow keys"
+				on:click={() => editor.chain().focus().toggleBold().run()}
+				class="p-2 rounded hover:bg-zinc-700 {editor.isActive('bold')
+					? 'bg-zinc-700 text-cyan-400'
+					: 'text-zinc-400'}"
+				title="Bold"
 			>
-				<div class="w-0.5 h-8 bg-zinc-500 group-hover:bg-blue-300 rounded-full"></div>
+				<strong>B</strong>
 			</button>
-		{/if}
-
-		{#if mode !== 'edit'}
-			<div
-				class="h-full overflow-auto bg-zinc-800 preview-area"
-				style="width: {mode === 'split' ? `calc(100% - ${splitPosition}% - 0.5rem)` : '100%'}; margin-left: {mode === 'split' ? '0.5rem' : '0'};"
-				aria-live="polite"
+			<button
+				on:click={() => editor.chain().focus().toggleItalic().run()}
+				class="p-2 rounded hover:bg-zinc-700 {editor.isActive('italic')
+					? 'bg-zinc-700 text-cyan-400'
+					: 'text-zinc-400'}"
+				title="Italic"
 			>
-				<div class="p-4">
-					<h2 class="text-2xl font-semibold pb-2 mb-4 border-b border-zinc-700 text-zinc-200">
-						{title || 'Untitled Post'}
-					</h2>
-					<div class="prose prose-invert max-w-none">
-						{@html previewHtml}
-					</div>
-				</div>
-			</div>
-		{/if}
+				<em>I</em>
+			</button>
+			<button
+				on:click={() => editor.chain().focus().toggleStrike().run()}
+				class="p-2 rounded hover:bg-zinc-700 {editor.isActive('strike')
+					? 'bg-zinc-700 text-cyan-400'
+					: 'text-zinc-400'}"
+				title="Strike"
+			>
+				<s>S</s>
+			</button>
+			<div class="w-px h-6 bg-zinc-600 mx-1"></div>
+			<button
+				on:click={() =>
+					editor.chain().focus().toggleHeading({ level: 1 }).run()}
+				class="p-2 rounded hover:bg-zinc-700 {editor.isActive(
+					'heading',
+					{ level: 1 },
+				)
+					? 'bg-zinc-700 text-cyan-400'
+					: 'text-zinc-400'}"
+				title="H1"
+			>
+				H1
+			</button>
+			<button
+				on:click={() =>
+					editor.chain().focus().toggleHeading({ level: 2 }).run()}
+				class="p-2 rounded hover:bg-zinc-700 {editor.isActive(
+					'heading',
+					{ level: 2 },
+				)
+					? 'bg-zinc-700 text-cyan-400'
+					: 'text-zinc-400'}"
+				title="H2"
+			>
+				H2
+			</button>
+			<button
+				on:click={() =>
+					editor.chain().focus().toggleHeading({ level: 3 }).run()}
+				class="p-2 rounded hover:bg-zinc-700 {editor.isActive(
+					'heading',
+					{ level: 3 },
+				)
+					? 'bg-zinc-700 text-cyan-400'
+					: 'text-zinc-400'}"
+				title="H3"
+			>
+				H3
+			</button>
+			<div class="w-px h-6 bg-zinc-600 mx-1"></div>
+			<button
+				on:click={() => editor.chain().focus().toggleBulletList().run()}
+				class="p-2 rounded hover:bg-zinc-700 {editor.isActive(
+					'bulletList',
+				)
+					? 'bg-zinc-700 text-cyan-400'
+					: 'text-zinc-400'}"
+				title="Bullet List"
+			>
+				• List
+			</button>
+			<button
+				on:click={() =>
+					editor.chain().focus().toggleOrderedList().run()}
+				class="p-2 rounded hover:bg-zinc-700 {editor.isActive(
+					'orderedList',
+				)
+					? 'bg-zinc-700 text-cyan-400'
+					: 'text-zinc-400'}"
+				title="Ordered List"
+			>
+				1. List
+			</button>
+			<div class="w-px h-6 bg-zinc-600 mx-1"></div>
+			<button
+				on:click={() => editor.chain().focus().toggleCodeBlock().run()}
+				class="p-2 rounded hover:bg-zinc-700 {editor.isActive(
+					'codeBlock',
+				)
+					? 'bg-zinc-700 text-cyan-400'
+					: 'text-zinc-400'}"
+				title="Code Block"
+			>
+				&lt;/&gt;
+			</button>
+			<button
+				on:click={() => editor.chain().focus().toggleBlockquote().run()}
+				class="p-2 rounded hover:bg-zinc-700 {editor.isActive(
+					'blockquote',
+				)
+					? 'bg-zinc-700 text-cyan-400'
+					: 'text-zinc-400'}"
+				title="Blockquote"
+			>
+				""
+			</button>
+		</div>
+	{/if}
+
+	<div
+		class="flex-1 overflow-y-auto bg-zinc-800 p-4 cursor-text"
+		on:click={() => editor?.chain().focus().run()}
+	>
+		<div bind:this={element} class="{height} outline-none"></div>
 	</div>
 </div>
 
 <style>
-	/* All your existing styles for .prose, .preview-area, etc., can remain the same. */
-	/* You may want to adjust the textarea style specifically. */
-	.editor-area {
-		caret-color: #06b6d4;
+	/* Custom styles for the editor content to match the theme */
+	:global(.ProseMirror) {
+		outline: none;
 	}
-
-	.editor-area::placeholder {
-		color: #6b7280; /* zinc-500 */
-		font-style: italic;
-	}
-
-	:global(.prose) {
-		color: inherit;
-	}
-	:global(.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6) {
-		color: inherit;
-	}
-	:global(.prose a) {
-		color: #38bdf8;
-	}
-	:global(.prose code) {
-		background-color: #374151;
-		color: #e5e7eb;
-		padding: 0.2em 0.4em;
-		margin: 0;
-		font-size: 85%;
-		border-radius: 3px;
-	}
-	:global(.prose pre) {
-		background-color: #1f2937;
-		color: #d1d5db;
-		padding: 1em;
-		border-radius: 6px;
-		overflow-x: auto;
-	}
-	:global(.prose pre code) {
-		background-color: transparent;
-		padding: 0;
-		font-size: inherit;
-		color: inherit;
-	}
-	:global(.prose img) {
-		max-width: 100%;
-		height: auto;
-		border-radius: 8px;
+	:global(.ProseMirror p.is-editor-empty:first-child::before) {
+		color: #6b7280;
+		content: attr(data-placeholder);
+		float: left;
+		height: 0;
+		pointer-events: none;
 	}
 </style>
